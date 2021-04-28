@@ -29,7 +29,22 @@ This will spawn a new shell subprocess, which can be deactivated by using exit.
 
 ## Testing
 
+## Contributing
 
+For testing, we use `pytest`. To run the tests, just type the command `pytest`, or you can specify a file e.g. `pytest tests/test_graph_generator.py`.
+
+We will use `black` as our code formatter. Simply run `black -S .` to run black over all the files before committing. The `-S` is to skip string normalisation, because we prefer single quotes/don't really care ([flame war, I know](https://github.com/psf/black/issues/118)).
+
+In summary, before merging a PR, you should:
+
+```bash
+# Make sure all tests pass
+cd src
+pipenv run python -m pytest tests/*
+
+# Format with black
+pipenv run python -m black -S .
+```
 
 ## MLFlow Tracking
 
