@@ -22,5 +22,6 @@ pytest = "*"
 [requires]
 python_version = "3.9"
 
-[packages]
-qaoa-vrp = {path = ".", editable = true}
+[packages.qaoa-vrp]
+editable = true
+path = "."
