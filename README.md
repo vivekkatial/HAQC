@@ -1,6 +1,6 @@
-# QAOA VRP
+# HAQC -- Heuristic Algorithms for Quantum Computing Research Group [![Build Status](https://travis-ci.com/vivekkatial/HAQC.svg?token=vybzhPMefnVqJBfpy4Ep&branch=main)](https://travis-ci.com/vivekkatial/HAQC)
 
-Implementation to run QAOA on the VRP Problem
+Research group to run optimisation algorithms on Quantum Computers at the University of Melbourne
 
 ## Getting Started
 
@@ -26,6 +26,10 @@ $ python --version
 ```
 
 This will spawn a new shell subprocess, which can be deactivated by using exit.
+
+## Testing
+
+
 
 ## MLFlow Tracking
 
