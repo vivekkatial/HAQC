@@ -15,12 +15,12 @@ prompt-toolkit = "==2.0.10"
 jupyter-console = "==6.0.0"
 protobuf = "*"
 mlflow = "*"
+pytest = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.9"
 
-[packages.qaoa-vrp]
-editable = true
-path = "."
+[packages]
+qaoa-vrp = {path = ".", editable = true}
