@@ -3,13 +3,15 @@
 Implementation to run QAOA on the VRP Problem
 
 ## Getting Started
+
 Before getting started, ensure you have Python 3.7+. We use [pipenv](https://pipenv-fork.readthedocs.io/en/latest/) to manage the python environment (the .gitignore file should already ignore it).
 
 ```{shell}
 $ pipenv install
 ```
 
-To  add a package to your new project:
+To add a package to your new project:
+
 ```{shell}
 $ pipenv install <package>
 ```
@@ -34,14 +36,16 @@ If you're keen to do this then please follow the instructions [here](https://wik
 You can request the credentials for this experiment from Vivek at vkatial@student.unimelb.edu.au
 
 ## Running a test instance
+
 To run a test instance try out the steps below:
+
 ```bash
 python qaoa_vrp/main.py -f test -T False # -T tracking for MLFlow
 ```
 
 ### Jupyter Notebooks
 
-First ensure that your Python is *not* aliased in your `.bashrc` or `.zshrc` file.
+First ensure that your Python is _not_ aliased in your `.bashrc` or `.zshrc` file.
 
 After this launch your `pipenv` by
 
@@ -63,4 +67,4 @@ jupyter notebook
 
 In your notebook, Kernel -> Change Kernel. Your kernel should now be an option.
 
-<img src='jupyter-install.png'/>
+<img src='images/jupyter-install.png'/>
