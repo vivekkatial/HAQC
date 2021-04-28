@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+import "float3.proto";
+
+option csharp_namespace = "Protobuf";
+
+message CircuitComputationResult {
+  string circuit_id = 1;
+  string circuit_hash = 2;
+
+  repeated TimeBlockComputationResult time_block_computation_results = 3;
+  repeated MeasurementGateResult measurement_gate_results = 4;
+  repeated TimeBlockErrorResults time_block_error_results = 5;
+}
+
+message TimeBlockComputationResult {
+  string time_block_id = 1;
+  repeated float amplitudes = 2;
+  repeated float phases = 3;
+  repeated float entanglements = 4;
+}
+
+message MeasurementGateResult {
+  string gate_id = 1;
+  bool outcome = 2;
+}
+
+message TimeBlockErrorResults {
+  message QubitErrorResult {
+    message ArbParams {
+      Float3 xyz_axes = 1;
+      float rotation_angle = 2;
+      float global_phase = 3;
+    }
+
+    oneof error_type {
+      bool x = 1;
+      bool y = 2;
+      bool z = 3;
+      ArbParams arb_error = 4;
+    }
+  }
+
+  map<int32, QubitErrorResult> qubit_error_results = 1;
+}

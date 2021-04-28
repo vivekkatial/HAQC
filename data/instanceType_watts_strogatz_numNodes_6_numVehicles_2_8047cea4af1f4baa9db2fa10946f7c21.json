@@ -1,0 +1,110 @@
+{
+    "graph": {
+        "nodes": [
+            {
+                "tag": "Depot",
+                "id": 0
+            },
+            {
+                "tag": "",
+                "id": 1
+            },
+            {
+                "tag": "",
+                "id": 2
+            },
+            {
+                "tag": "",
+                "id": 3
+            },
+            {
+                "tag": "",
+                "id": 4
+            },
+            {
+                "tag": "",
+                "id": 5
+            }
+        ],
+        "edges": [
+            {
+                "cost": 3.6,
+                "id": "2680c5eaca7347bbb49c53a2feceda63",
+                "source": 0,
+                "target": 5
+            },
+            {
+                "cost": 0.31,
+                "id": "8720627507f54cd89299be6b2d5bc0f6",
+                "source": 0,
+                "target": 2
+            },
+            {
+                "cost": 7.8,
+                "id": "0098aec9bf894b9ca2700857751be2a7",
+                "source": 0,
+                "target": 3
+            },
+            {
+                "cost": 3.11,
+                "id": "8ddf8761e8b44232a195f4b15b495d1b",
+                "source": 0,
+                "target": 1
+            },
+            {
+                "cost": 9.41,
+                "id": "577ff558af9342e2840d636a7127421d",
+                "source": 1,
+                "target": 2
+            },
+            {
+                "cost": 8.61,
+                "id": "6bdc8eaf188247068387aec71d7beeef",
+                "source": 1,
+                "target": 4
+            },
+            {
+                "cost": 0.79,
+                "id": "90560c40a1394305958c58f7cf10e736",
+                "source": 2,
+                "target": 3
+            },
+            {
+                "cost": 0.67,
+                "id": "f585763b751c47a4bfbc0d338dea0ff1",
+                "source": 2,
+                "target": 4
+            },
+            {
+                "cost": 9.66,
+                "id": "69f852b8d19649cd8980ba07e000d55a",
+                "source": 2,
+                "target": 5
+            },
+            {
+                "cost": 5.95,
+                "id": "7e80fcbf8a3f46648f44c23a8f410af3",
+                "source": 3,
+                "target": 4
+            },
+            {
+                "cost": 2.05,
+                "id": "59df77bc185d4da183654751bb4b97bd",
+                "source": 3,
+                "target": 5
+            },
+            {
+                "cost": 4.04,
+                "id": "d53b0496a9494abd8e5c506fc451e500",
+                "source": 4,
+                "target": 5
+            }
+        ]
+    },
+    "vehicleCapacity": 1,
+    "numVehicles": 2,
+    "n_max": 10,
+    "threshold": 1,
+    "p_max": 10,
+    "instance_type": "watts_strogatz"
+}

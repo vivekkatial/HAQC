@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+option csharp_namespace = "Protobuf";
+
+message InputValue {
+  oneof representation {
+    double numeric = 1;
+    string expr = 2;
+  }
+}
+
+message InputValue3 {
+  InputValue x = 1;
+  InputValue y = 2;
+  InputValue z = 3;
+}
+
+message GlobalParam {
+  string variable_name = 1;
+  InputValue value = 2;
+}

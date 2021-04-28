@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+import "error.proto";
+import "param_string.proto";
+
+option csharp_namespace = "Protobuf";
+
+message Circuit {
+  string id = 1;
+  int32 num_qubits = 2;
+  repeated TimeBlock time_blocks = 3;
+
+  ErrorModel global_error_model = 4;
+  map<int32, ErrorModel> qubit_error_models = 5;
+
+  repeated GlobalParam global_params = 6;
+  
+  repeated TimeBlockGroup time_block_groups = 7;
+}
+
+message TimeBlock {
+  string id = 1;
+  repeated Component components = 2;
+}
+
+message TimeBlockGroup {
+  string name = 1;
+  int32 start_time_block_idx = 2;
+  int32 end_time_block_idx = 3;
+  bool expanded = 4;
+}
+
+message Component {
+  enum ComponentType {
+    GATE = 0;
+    CIRCUIT = 1;
+    CIRCUIT_REF = 2;
+  }
+
+  string id = 1;
+  ComponentType type = 2;
+
+  Gate gate = 3;
+  Circuit circuit = 4;
+  string circuit_ref = 5;
+
+  repeated int32 qubits = 6;
+  repeated int32 controls_zero = 7;
+  repeated int32 controls_one = 8;
+}
+
+message Gate {
+  enum GateType {
+    MEASURE = 0;
+    H = 1;
+    X = 2;
+    SX = 3;
+    Y = 4;
+    SY = 5;
+    Z = 6;
+    S = 7;
+    T = 8;
+    NOT = 9;
+    ARB_LEGACY = 10;
+    SWAP = 11;
+    ARB = 12;
+  }
+
+  message ArbParams {
+    InputValue3 xyz_axes = 1;
+    InputValue rotation_angle = 2;
+    InputValue global_phase = 3;
+  }
+
+  GateType type = 1;
+  repeated float arb_legacy_params = 2;
+  ArbParams arb_params = 3;
+}

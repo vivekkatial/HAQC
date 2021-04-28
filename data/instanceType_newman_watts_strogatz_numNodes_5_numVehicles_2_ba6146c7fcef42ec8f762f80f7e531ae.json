@@ -1,0 +1,82 @@
+{
+    "graph": {
+        "nodes": [
+            {
+                "tag": "Depot",
+                "id": 0
+            },
+            {
+                "tag": "",
+                "id": 1
+            },
+            {
+                "tag": "",
+                "id": 2
+            },
+            {
+                "tag": "",
+                "id": 3
+            },
+            {
+                "tag": "",
+                "id": 4
+            }
+        ],
+        "edges": [
+            {
+                "cost": 6.32,
+                "id": "53424c55d7c6433a994d1ef77d0a9471",
+                "source": 0,
+                "target": 1
+            },
+            {
+                "cost": 5.79,
+                "id": "ad55359b9dec4cfdb508b62141ff13c9",
+                "source": 0,
+                "target": 4
+            },
+            {
+                "cost": 4.75,
+                "id": "f5231b19df2e4d9b847078648b2518c4",
+                "source": 0,
+                "target": 2
+            },
+            {
+                "cost": 3.87,
+                "id": "b9f387653ae8448aa23b1714d0c16ba3",
+                "source": 0,
+                "target": 3
+            },
+            {
+                "cost": 1.88,
+                "id": "fe761ec5958042828704cab82d256b31",
+                "source": 1,
+                "target": 2
+            },
+            {
+                "cost": 4.48,
+                "id": "6bfa50db44ea4a0b8e3973725e28da96",
+                "source": 1,
+                "target": 3
+            },
+            {
+                "cost": 9.97,
+                "id": "907350cc7e3f4434b65bef16be9d7e11",
+                "source": 2,
+                "target": 3
+            },
+            {
+                "cost": 7.46,
+                "id": "d73ac8afddfe49c3872916d0472b1f70",
+                "source": 3,
+                "target": 4
+            }
+        ]
+    },
+    "vehicleCapacity": 1,
+    "numVehicles": 2,
+    "n_max": 10,
+    "threshold": 1,
+    "p_max": 10,
+    "instance_type": "newman_watts_strogatz"
+}

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+import "circuit.proto";
+import "circuit_computation_request.proto";
+import "circuit_computation_result.proto";
+
+option csharp_namespace = "Protobuf";
+
+message QUICircuit {
+  Circuit circuit = 1;
+  CircuitComputationRequest saved_request = 2;
+  CircuitComputationResult saved_result = 3;
+}

@@ -1,0 +1,7 @@
+{
+    "experiment":{
+        "name": "vrp-qaoa",
+        "tracking-uri": "http://45.113.234.250:5000/",
+        "author": "Floyd and Vivek"
+    }
+}

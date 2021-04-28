@@ -1,0 +1,88 @@
+{
+    "graph": {
+        "nodes": [
+            {
+                "tag": "Depot",
+                "id": 0
+            },
+            {
+                "tag": "",
+                "id": 1
+            },
+            {
+                "tag": "",
+                "id": 2
+            },
+            {
+                "tag": "",
+                "id": 3
+            },
+            {
+                "tag": "",
+                "id": 4
+            }
+        ],
+        "edges": [
+            {
+                "cost": 3.93,
+                "id": "2836256c941d4caaaa2682548db41e2f",
+                "source": 0,
+                "target": 1
+            },
+            {
+                "cost": 3.13,
+                "id": "21154f2c98914bc0974f5aabc55cc1f6",
+                "source": 0,
+                "target": 4
+            },
+            {
+                "cost": 9.53,
+                "id": "fc317ec65e994e5ca36bc3ad8b056afd",
+                "source": 0,
+                "target": 2
+            },
+            {
+                "cost": 8.02,
+                "id": "4672b18fda6b411a8d3fece75c3e4c57",
+                "source": 0,
+                "target": 3
+            },
+            {
+                "cost": 7.73,
+                "id": "01fcd6723b8b4a38844be2f4cfd3a18a",
+                "source": 1,
+                "target": 2
+            },
+            {
+                "cost": 6.78,
+                "id": "dd242719592940729affe892533e38b1",
+                "source": 1,
+                "target": 3
+            },
+            {
+                "cost": 0.5,
+                "id": "e92bd3f9ea85449595eba9613399e5b1",
+                "source": 2,
+                "target": 3
+            },
+            {
+                "cost": 8.84,
+                "id": "8e58cebd671d48fb9c080f3eb9422691",
+                "source": 2,
+                "target": 4
+            },
+            {
+                "cost": 5.5,
+                "id": "b4632bd7c9034910bb80f02f21269223",
+                "source": 3,
+                "target": 4
+            }
+        ]
+    },
+    "vehicleCapacity": 1,
+    "numVehicles": 2,
+    "n_max": 10,
+    "threshold": 1,
+    "p_max": 10,
+    "instance_type": "newman_watts_strogatz"
+}
