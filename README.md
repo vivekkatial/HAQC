@@ -89,3 +89,8 @@ jupyter notebook
 In your notebook, Kernel -> Change Kernel. Your kernel should now be an option.
 
 <img src='images/jupyter-install.png'/>
+
+## Authors
+- Vivek Katial
+- Floyd Creevey
+- Jedwin Villareal Villanueva
