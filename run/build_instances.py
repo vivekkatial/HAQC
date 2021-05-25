@@ -8,10 +8,11 @@ if __name__ == "__main__":
 
     # Global Variables
     num_nodes = range(5, 6)
-    num_vehicles = range(2, 4)
+    num_vehicles = range(1, 2)
     max_layers = range(2, 10)
-    instance_types = ["watts_strogatz", "complete", "newman_watts_strogatz"]
+    # instance_types = ["watts_strogatz", "complete", "newman_watts_strogatz"]
     n_rand = 100
+    instance_types = ["complete"]
 
     for n in num_nodes:
         for v in num_vehicles:

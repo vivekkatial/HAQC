@@ -2,10 +2,11 @@ import base64
 import uuid
 from collections import defaultdict
 from itertools import count
-
+from qiskit.providers.aer import QasmSimulator
 import networkx as nx
 import numpy as np
 from qiskit import BasicAer, execute
+from qiskit.providers.aer import QasmSimulator
 from qiskit.aqua import QuantumInstance, aqua_globals
 from qiskit.aqua.algorithms import QAOA, NumPyMinimumEigensolver
 from qiskit.aqua.components.optimizers import ADAM, AQGD, COBYLA, NELDER_MEAD
@@ -27,6 +28,7 @@ def build_qubos(clusters, depot_info, A=30):
     Returns:
         list: A list of QUBO formulations
     """
+
     qubos = []
     for subgraph in clusters:
         cluster = clusters[subgraph]
@@ -165,7 +167,7 @@ def qubo_to_qaoa(qubo, num_layers):
     op, offset = qubo.to_ising()
 
     quantum_instance = QuantumInstance(
-        BasicAer.get_backend("statevector_simulator"),
+        QasmSimulator(method='matrix_product_state'),
         seed_simulator=aqua_globals.random_seed,
         seed_transpiler=aqua_globals.random_seed,
     )
@@ -237,7 +239,7 @@ def solve_qubo_qaoa(qubo, p, points):
     # qaoa = QAOA(operator=op, p=p, initial_point=points, optimizer=NELDER_MEAD())
 
     quantum_instance = QuantumInstance(
-        BasicAer.get_backend("statevector_simulator"),
+        QasmSimulator(method='matrix_product_state'),
         seed_simulator=aqua_globals.random_seed,
         seed_transpiler=aqua_globals.random_seed,
     )
@@ -309,13 +311,19 @@ def print_result(qubo, result, num_qubits, exact_value):
         result (dict): the result of the QAOA
         num_qubits (int): the number of qubits in the QAOA circuit
     """
-
-    eigenvector = (
-        result.eigenstate
-        if isinstance(result.eigenstate, np.ndarray)
-        else result.eigenstate.to_matrix()
-    )
-    probabilities = np.abs(eigenvector) ** 2
+    # import pdb
+    # pdb.set_trace()
+    # eigenvector = (
+    #     result.eigenstate
+    #     if isinstance(result.eigenstate, np.ndarray)
+    #     else result.eigenstate.to_matrix()
+    # )
+    # probabilities = np.abs(eigenvector) ** 2
+    probabilities = []
+    for probability in result.eigenstate.values():
+        probabilities.append(float(probability)/1024)
+    # import pdb
+    # pdb.set_trace()
     i_sorted = reversed(np.argsort(probabilities))
     print("----------------- Full result ---------------------")
     print("index\tselection\t\tvalue\t\tprobability")
