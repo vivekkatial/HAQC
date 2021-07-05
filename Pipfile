@@ -16,12 +16,8 @@ jupyter-console = "==6.0.0"
 protobuf = "*"
 mlflow = "*"
 pytest = "*"
-
-[dev-packages]
+qaoa-vrp = {path = ".", editable = true}
+black = "*"
 
 [requires]
 python_version = "3.9"
-
-[packages.qaoa-vrp]
-editable = true
-path = "."

@@ -16,7 +16,8 @@ import os
 
 # Custom Libraries
 import qaoa_vrp.build_graph
-import qaoa_vrp.graph_features
+import qaoa_vrp.features.graph_features
+import qaoa_vrp.features.tsp_features
 import qaoa_vrp.build_circuit
 import qaoa_vrp.clustering
 import qaoa_vrp.utils
@@ -171,13 +172,16 @@ def run_vrp_instance(filename, mlflow_tracking, raw_build=True):
         mlflow.set_tracking_uri(params["experiment"]["tracking-uri"])
         mlflow.set_experiment(params["experiment"]["name"])
 
-        # Build Feature Vector
-        feature_vector = qaoa_vrp.graph_features.get_graph_features(G)
+        # Build Graph Feature Vector
+        feature_vector = qaoa_vrp.features.graph_features.get_graph_features(G)
+        # Build TSP Feature Vector
+        tsp_feature_vector = qaoa_vrp.features.tsp_features.get_tsp_features(G)
         # Add num vehicles
         feature_vector["num_vehicles"] = num_vehicles
 
         # Log Params
         mlflow.log_params(feature_vector)
+        mlflow.log_params(tsp_feature_vector)
         mlflow.log_params(qaoa_dict)
         mlflow.log_param("source", instance_type)
         mlflow.log_param("instance_uuid", filename)
