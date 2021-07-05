@@ -52,7 +52,8 @@ From: python:3.9.2
   pip install --upgrade pip
   git clone https://github.com/vivekkatial/HAQC.git
   cd HAQC
-  pip install -r requirements.txt
+  pip install pipenv
+  pipenv install --system --deploy --ignore-pipfile
 
   ####################################################
   # AWS Installation
