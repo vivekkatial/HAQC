@@ -50,7 +50,7 @@ From: python:3.9.2
   # Python / QISKit Installation
   ####################################################
   pip install --upgrade pip
-  git clone https://gitlab.unimelb.edu.au/unimelbqc/aqted/qaoa-vrp.git
+  git clone https://github.com/vivekkatial/HAQC.git
   cd qaoa-vrp
   pip install -r requirements.txt
 
