@@ -50,9 +50,10 @@ From: python:3.9.2
   # Python / QISKit Installation
   ####################################################
   pip install --upgrade pip
-  git clone https://gitlab.unimelb.edu.au/unimelbqc/aqted/qaoa-vrp.git
-  cd qaoa-vrp
-  pip install -r requirements.txt
+  git clone https://github.com/vivekkatial/HAQC.git
+  cd HAQC
+  pip install pipenv
+  pipenv install --system --deploy --ignore-pipfile
 
   ####################################################
   # AWS Installation

@@ -7,7 +7,7 @@ if __name__ == "__main__":
     logging.info("Building Instances")
 
     # Global Variables
-    num_nodes = range(5, 6)
+    num_nodes = range(4,5)
     num_vehicles = range(1, 2)
     max_layers = range(2, 10)
     # instance_types = ["watts_strogatz", "complete", "newman_watts_strogatz"]

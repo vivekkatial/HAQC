@@ -59,7 +59,8 @@ def get_graph_features(G):
     features["planar"] = nx.algorithms.planarity.check_planarity(G)[0]
     features["radius"] = nx.algorithms.distance_measures.radius(G)
     features["regular"] = nx.algorithms.regular.is_regular(G)
-    features["second_largest_eigenvalue"] = sorted(e)[1]
+    features["laplacian_second_largest_eigenvalue"] = sorted(e)[1]
+    features["ratio_of_two_largest_laplacian_eigenvaleus"] = max(e)/sorted(e)[1]
     features["smallest_eigenvalue"] = min(e)
     features[
         "vertex_connectivity"
