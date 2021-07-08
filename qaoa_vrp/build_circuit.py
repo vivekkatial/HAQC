@@ -5,7 +5,7 @@ from itertools import count
 from qiskit.providers.aer import QasmSimulator
 import networkx as nx
 import numpy as np
-from qiskit import BasicAer, execute
+from qiskit import Aer, execute
 from qiskit.providers.aer import QasmSimulator
 from qiskit.aqua import QuantumInstance, aqua_globals
 from qiskit.aqua.algorithms import QAOA, NumPyMinimumEigensolver
@@ -216,7 +216,7 @@ def measure_energy(qubo, qc):
     return energy
 
 
-def solve_qubo_qaoa(qubo, p, points):
+def solve_qubo_qaoa(qubo, p, points, backend):
     """
     Create QAOA from given qubo, and solves for both the exact value and the QAOA
 
@@ -235,18 +235,26 @@ def solve_qubo_qaoa(qubo, p, points):
 
     op, offset = qubo.to_ising()
 
-    qaoa = QAOA(operator=op, p=p,  initial_point=list(2*np.pi*np.random.random(2*p)), optimizer=NELDER_MEAD())
+    # qaoa = QAOA(operator=op, p=p,  initial_point=list(2*np.pi*np.random.random(2*p)), optimizer=NELDER_MEAD())
     # qaoa = QAOA(operator=op, p=p, initial_point=points, optimizer=NELDER_MEAD())
-
+    
+    if backend == 'statevector_simulator':
+        method = Aer.get_backend("statevector_simulator")
+    elif backend == 'matrix_product_state':
+        method = QasmSimulator(method='matrix_product_state')
     quantum_instance = QuantumInstance(
-        QasmSimulator(method='matrix_product_state'),
+        method,
+        shots=8192*2,
         seed_simulator=aqua_globals.random_seed,
-        seed_transpiler=aqua_globals.random_seed,
-    )
+        seed_transpiler=aqua_globals.random_seed)
 
-    qaoa_result = qaoa.run(quantum_instance)
 
-    return qaoa_result, exact_result, offset
+    qaoa_meas = QAOA(quantum_instance=quantum_instance, p=p, initial_point=list(2*np.pi*np.random.random(2*p)))
+
+    qaoa = MinimumEigenOptimizer(qaoa_meas)
+    qaoa_result = qaoa.solve(qubo)
+
+    return qaoa_result, exact_result, offset, qaoa
 
 
 def interp_point(optimal_point):
@@ -302,7 +310,7 @@ def index_to_selection(i, num_assets):
     return x
 
 
-def print_result(qubo, result, num_qubits, exact_value):
+def print_result(qubo, qaoa_result, num_qubits, exact_value, backend):
     """
     Prints the results of the QAOA in a nice form
 
@@ -311,19 +319,19 @@ def print_result(qubo, result, num_qubits, exact_value):
         result (dict): the result of the QAOA
         num_qubits (int): the number of qubits in the QAOA circuit
     """
-    # import pdb
-    # pdb.set_trace()
-    # eigenvector = (
-    #     result.eigenstate
-    #     if isinstance(result.eigenstate, np.ndarray)
-    #     else result.eigenstate.to_matrix()
-    # )
-    # probabilities = np.abs(eigenvector) ** 2
-    probabilities = []
-    for probability in result.eigenstate.values():
-        probabilities.append(float(probability)/1024)
-    # import pdb
-    # pdb.set_trace()
+
+    if backend == 'statevector_simulator':
+        eigenvector = (
+            qaoa_result.min_eigen_solver_result['eigenstate']
+            if isinstance(qaoa_result.min_eigen_solver_result['eigenstate'], np.ndarray)
+            else qaoa_result.min_eigen_solver_result['eigenstate'].to_matrix()
+        )
+        probabilities = np.abs(eigenvector) ** 2
+    elif backend == 'matrix_product_state':
+        probabilities = []
+        for eigenstate in qaoa_result.min_eigen_solver_result['eigenstate']:
+            probabilities.append(qaoa_result.min_eigen_solver_result['eigenstate'][eigenstate]/1024)
+
     i_sorted = reversed(np.argsort(probabilities))
     print("----------------- Full result ---------------------")
     print("index\tselection\t\tvalue\t\tprobability")
