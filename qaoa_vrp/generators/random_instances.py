@@ -3,6 +3,8 @@ import numpy as np
 import random
 import uuid
 
+from qaoa_vrp.utils import distance
+
 
 def generate_random_instance(num_nodes, num_vehicles, instance_type):
     """
@@ -24,6 +26,7 @@ def generate_random_instance(num_nodes, num_vehicles, instance_type):
             "erdos_renyi",
             "complete",
             "newman_watts_strogatz",
+            "euclidean_tsp"
         ]:
             raise ValueError("Incorrect Instance Type Requested")
 
@@ -35,9 +38,15 @@ def generate_random_instance(num_nodes, num_vehicles, instance_type):
             G = complete_graph(num_nodes, num_vehicles)
         elif instance_type == "newman_watts_strogatz":
             G = generate_newman_watts_strogatz_graph(num_nodes, num_vehicles)
+        elif instance_type == "euclidean_tsp":
+            G = generate_euclidean_graph(num_nodes)
+        elif instance_type == "euclidean_tsp_outlier":
+            # G = generate_euclidean_graph(num_nodes, outlier_info)
+            raise ValueError("This has not yet been implemented")
 
         for (u, v) in G.edges():
-            G.edges[u, v]["cost"] = round(np.random.random() * 10, 2)
+            if "euclidean" not in instance_type:
+                G.edges[u, v]["cost"] = round(np.random.random(), 2)
             G.edges[u, v]["id"] = uuid.uuid4().hex
 
         # Randomly select depot
@@ -111,4 +120,36 @@ def generate_newman_watts_strogatz_graph(num_nodes, num_vehicles, k=2, p=0.5):
 def complete_graph(num_nodes, num_vehicles):
     """ Build Complete Graph """
     G = nx.complete_graph(num_nodes)
+    return G
+
+def generate_euclidean_graph(num_nodes):
+    """A function to generate a euclidean graph 'G' based on:
+    2. Initialise an empty graph
+    3. Randomly generate positions on a 2D plane and allocate these points as nodes
+    4. Create a complete graph by connecting all edges together and 
+    make the cost the euclidean distance between the two points
+
+    Args:
+        num_nodes (int): Number of nodes
+    """
+
+    # Init range for vertices
+    V=range(num_nodes)
+
+    # Initialise empty graph
+    G = nx.Graph()
+
+    # Build nodes
+    nodes = [(i,{'pos':tuple(np.random.random(2))}) for i in V]
+    G.add_nodes_from(nodes)
+
+    # Get positions
+    pos = nx.get_node_attributes(G, 'pos')
+
+    # Add edges to the graph
+    for i in V:
+        for j in V:
+            if i != j:
+                G.add_edge(i, j, cost=distance(pos[i],pos[j]))
+
     return G
