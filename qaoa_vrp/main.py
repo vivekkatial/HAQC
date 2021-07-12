@@ -49,68 +49,28 @@ def solve_qaoa(
 
         points = list(2 * np.pi * np.random.random(2 * p))
 
-        prev_optimal_value = 100000
-        optimal_value = 1000
-
-        while p <= 20:
+        while p <= p_max:
             t_start = time.time()
-            if n != 1:
-                prev_optimal_value = optimal_value
 
-            qaoa, circuit, params_expr = qaoa_vrp.build_circuit.qubo_to_qaoa(qubo, p)
+            (
+                qaoa_result,
+                exact_result,
+                offset,
+                num_qubits,
+            ) = qaoa_vrp.build_circuit.solve_qubo_qaoa(qubo, p, points, backend)
 
-            qaoa_result, exact_result, offset, qaoa = qaoa_vrp.build_circuit.solve_qubo_qaoa(
-                qubo, p, points, backend
-            )
-
-            # parameters = [
-            #     qaoa_result["optimal_parameters"][parameter]
-            #     for parameter in qaoa_result["optimal_parameters"]
-            # ]
-            # gammas = parameters[0::2]
-            # betas = parameters[1::2]
-
-            # (
-            #     num_nodes,
-            #     linear_terms,
-            #     quadratic_terms,
-            # ) = qaoa_vrp.build_circuit.to_hamiltonian_dicts(qubo)
-
-            # circuit_protobuf = qaoa_vrp.build_circuit.generate_circuit_pb(
-            #     num_nodes, linear_terms, quadratic_terms, gammas, betas
-            # )
-
-            # optimal_value = qaoa_result["optimal_value"] + offset
-
-            # points = qaoa_vrp.build_circuit.interp_point(qaoa_result["optimal_point"])
-
-            # optimal_value = qaoa_result["optimal_value"] + offset
-
-            # print("Cluster QUBO {}:".format(i))
-            # print("Optimal value: {}".format(optimal_value))
             print(qaoa_result)
-
             print("Exact result (p={}): {}".format(p, exact_result.samples))
-            # import pdb
-            # pdb.set_trace()
-            probability, solution_data = qaoa_vrp.build_circuit.print_result(
-                qubo, qaoa_result, circuit.num_qubits, exact_result.samples[0][1], backend
-            )
-            # if num_nodes > 1:
-            #     p_success = probability[0] + probability[1]
-            # else:
-            p_success = probability[0]
 
-            # if raw_build:
-            #     # Evolution p_step
-            #     evolution_p_data = {
-            #         "p": p,
-            #         "state": solution_data,
-            #         "circuitB4": circuit_protobuf,
-            #         "probability_success": p_success,
-            #     }
-            #     # Attach evolution step
-            #     evolution_data.append(evolution_p_data)
+            probability, solution_data = qaoa_vrp.build_circuit.print_result(
+                qubo,
+                qaoa_result,
+                num_qubits,
+                exact_result.samples[0][1],
+                backend,
+            )
+
+            p_success = probability[0]
 
             p += 1
             t_end = time.time()
@@ -235,7 +195,7 @@ def run_vrp_instance(filename, backend, mlflow_tracking, raw_build=True):
 
         # Solution data for QUBO stuff
         qubos_solution_data.append(single_qubo_solution_data)
-    
+
     # Compute quantum burden
     quantum_burden = compute_quantum_burden(qubos_solution_data)
 
@@ -283,7 +243,7 @@ if __name__ == "__main__":
         "-b",
         "--backend",
         type=str,
-        default='matrix_product_state',
+        default="matrix_product_state",
         help="The backend used for the optimisation (Currently either 'statevector_simulator' or 'matrix_product_state",
     )
 
