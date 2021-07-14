@@ -1,5 +1,6 @@
 import networkx as nx
 
+
 def greedy_tsp(G, weight="cost", source=None):
     """Return a low cost cycle starting at `source` and its cost.
 
@@ -65,7 +66,7 @@ def greedy_tsp(G, weight="cost", source=None):
 
     Time complexity: It has a running time $O(|V|^2)$
     """
-    
+
     # Check that G is a complete graph
     N = len(G) - 1
     # This check ignores selfloops which is what we want here.

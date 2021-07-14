@@ -26,7 +26,7 @@ def draw_graph_with_edge_weights(G):
 
 
 def np_encoder(object):
-    """Numpy encoder """
+    """Numpy encoder"""
     if isinstance(object, np.generic):
         return object.item()
 
@@ -74,12 +74,14 @@ def instance_constructor(
 
     return instance
 
+
 def get_direction():
-    direction = np.random.randint(-1, 2) 
+    direction = np.random.randint(-1, 2)
     if direction == 0:
         return get_direction()
     else:
         return direction
+
 
 def compile_and_write(
     num_nodes,

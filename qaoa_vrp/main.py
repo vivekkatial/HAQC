@@ -232,7 +232,7 @@ def run_vrp_instance(filename, mlflow_tracking, raw_build=True):
 
         # Solution data for QUBO stuff
         qubos_solution_data.append(single_qubo_solution_data)
-    
+
     # Compute quantum burden
     quantum_burden = compute_quantum_burden(qubos_solution_data)
 

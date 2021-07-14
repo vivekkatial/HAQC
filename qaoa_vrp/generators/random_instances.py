@@ -7,7 +7,9 @@ from qaoa_vrp.utils import distance
 from qaoa_vrp.generators.generator_utils import get_direction
 
 
-def generate_random_instance(num_nodes, num_vehicles, instance_type, num_outliers=0,gamma=0):
+def generate_random_instance(
+    num_nodes, num_vehicles, instance_type, num_outliers=1, gamma=2
+):
     """
     This function creates random graphs with each node having dimension of 2
 
@@ -28,7 +30,8 @@ def generate_random_instance(num_nodes, num_vehicles, instance_type, num_outlier
             "complete",
             "newman_watts_strogatz",
             "euclidean_tsp",
-            "euclidean_tsp_outlier"
+            "euclidean_tsp_outlier",
+            "asymmetric_tsp",
         ]:
             raise ValueError("Incorrect Instance Type Requested")
 
@@ -43,7 +46,11 @@ def generate_random_instance(num_nodes, num_vehicles, instance_type, num_outlier
         elif instance_type == "euclidean_tsp":
             G = generate_euclidean_graph(num_nodes)
         elif instance_type == "euclidean_tsp_outlier":
-            G = generate_euclidean_graph_with_outliers(num_nodes=num_nodes,num_outliers=num_outliers,gamma=gamma)
+            G = generate_euclidean_graph_with_outliers(
+                num_nodes=num_nodes, num_outliers=num_outliers, gamma=gamma
+            )
+        elif instance_type == "asymmetric_tsp":
+            G = generate_asymmetric_euclidean_graph(num_nodes)
 
         for (u, v) in G.edges():
             if "euclidean" not in instance_type:
@@ -101,33 +108,34 @@ def verify_graph(G, num_vehicles):
 
 
 def generate_watts_strogatz_graph(num_nodes, num_vehicles, k=4, p=0.5):
-    """ Build Watts Strogatz Graph """
+    """Build Watts Strogatz Graph"""
     G = nx.connected_watts_strogatz_graph(num_nodes, k, p, num_vehicles)
     return G
 
 
 def generate_erdos_renyi(num_nodes, num_vehicles, p=0.5):
-    """ Build Erdors-Renyi Graph"""
+    """Build Erdors-Renyi Graph"""
     G = nx.erdos_renyi_graph(num_nodes, p, num_vehicles)
     return G
 
 
-def generate_newman_watts_strogatz_graph(num_nodes, num_vehicles, k=2, p=0.5):
-    """ Build Newman Wattz Strogatz Graph"""
+def generate_newman_watts_strogatz_graph(num_nodes, k=2, p=0.5):
+    """Build Newman Wattz Strogatz Graph"""
     G = nx.newman_watts_strogatz_graph(num_nodes, k, p)
     return G
 
 
-def complete_graph(num_nodes, num_vehicles):
-    """ Build Complete Graph """
+def complete_graph(num_nodes):
+    """Build Complete Graph"""
     G = nx.complete_graph(num_nodes)
     return G
 
-def generate_euclidean_graph(num_nodes):
+
+def generate_euclidean_graph(num_nodes: int) -> nx.classes.graph.Graph:
     """A function to generate a euclidean graph 'G' based on:
     2. Initialise an empty graph
     3. Randomly generate positions on a 2D plane and allocate these points as nodes
-    4. Create a complete graph by connecting all edges together and 
+    4. Create a complete graph by connecting all edges together and
     make the cost the euclidean distance between the two points
 
     Args:
@@ -135,13 +143,13 @@ def generate_euclidean_graph(num_nodes):
     """
 
     # Init range for vertices
-    V=range(num_nodes)
+    V = range(num_nodes)
 
     # Initialise empty graph
     G = nx.Graph()
 
     # Build nodes
-    nodes = [(i,{'pos':tuple(np.random.random(2))}) for i in V]
+    nodes = [(i, {'pos': tuple(np.random.random(2))}) for i in V]
     G.add_nodes_from(nodes)
 
     # Get positions
@@ -151,11 +159,14 @@ def generate_euclidean_graph(num_nodes):
     for i in V:
         for j in V:
             if i != j:
-                G.add_edge(i, j, cost=distance(pos[i],pos[j]))
+                G.add_edge(i, j, cost=distance(pos[i], pos[j]))
 
     return G
 
-def generate_euclidean_graph_with_outliers(num_nodes:int, num_outliers:int, gamma:float)->nx.classes.graph.Graph:
+
+def generate_euclidean_graph_with_outliers(
+    num_nodes: int, num_outliers: int, gamma: float
+) -> nx.classes.graph.Graph:
     """A function to generate a euclidean graph with outlier structure
 
     Args:
@@ -173,35 +184,40 @@ def generate_euclidean_graph_with_outliers(num_nodes:int, num_outliers:int, gamm
 
     # Randomly select k nodes from the network (check k < N)
     if num_outliers > G.number_of_nodes():
-        raise ValueError("k=%s cannot be higher than the number of nodes N=%s"%(num_nodes, G.number_of_nodes()))
+        raise ValueError(
+            "k=%s cannot be higher than the number of nodes N=%s"
+            % (num_nodes, G.number_of_nodes())
+        )
     else:
         # Ensure we get k distinct nodes being selected
-        random_nodes = np.random.choice(range(G.number_of_nodes()),num_outliers,replace=False)    
-    
+        random_nodes = np.random.choice(
+            range(G.number_of_nodes()), num_outliers, replace=False
+        )
+
     # Update the node locations
     for node in random_nodes:
         # Move node
         x_move_direction = get_direction()
         y_move_direction = get_direction()
-        x_new = G.nodes()[node]['pos'][0] + x_move_direction*gamma*np.sqrt(2)
-        y_new = G.nodes()[node]['pos'][1] + y_move_direction*gamma*np.sqrt(2)
+        x_new = G.nodes()[node]['pos'][0] + x_move_direction * gamma * np.sqrt(2)
+        y_new = G.nodes()[node]['pos'][1] + y_move_direction * gamma * np.sqrt(2)
         G.nodes()[node]['pos'] = (x_new, y_new)
         G.nodes()[node]['tag'] = "outlier"
 
     # Get new position data
     pos = nx.get_node_attributes(G, 'pos')
 
-    V=range(num_nodes)
+    V = range(num_nodes)
     # Recalculate edge distances
     for i in V:
         for j in V:
             if i != j:
-                G.add_edge(i, j, cost=distance(pos[i],pos[j]))
+                G.add_edge(i, j, cost=distance(pos[i], pos[j]))
 
     return G
 
 
-def generate_asymmetric_euclidean_graph(num_nodes: int)->nx.classes.graph.Graph:
+def generate_asymmetric_euclidean_graph(num_nodes: int) -> nx.classes.graph.Graph:
     """A function to generate an asymmetric where one half is a euclidean graph
 
     Args:
@@ -212,9 +228,9 @@ def generate_asymmetric_euclidean_graph(num_nodes: int)->nx.classes.graph.Graph:
     """
 
     # Generate random euclidean graph
-    G = generate_euclidean_graph(4)
+    G = generate_euclidean_graph(num_nodes)
     adj = nx.adjacency_matrix(G, weight='cost')
-    
+
     # Randomly generate an adjacency matrix with random costs for each edge
     rand = np.random.rand(len(G), len(G))
     np.fill_diagonal(rand, 0)
@@ -223,7 +239,7 @@ def generate_asymmetric_euclidean_graph(num_nodes: int)->nx.classes.graph.Graph:
     # A_{\text{asym}} = A - L(A) + A_{\text{rand}}
     asymmetric_adj = adj.toarray() - np.tril(adj.toarray()) + rand
     dt = [("cost", float)]
-    asymmetric_adj = np.array(asymmetric_adj,dtype=dt)
+    asymmetric_adj = np.array(asymmetric_adj, dtype=dt)
 
     # Convert this adjacency matrix into a graph
     G_asym = nx.from_numpy_array(asymmetric_adj, create_using=nx.DiGraph)
@@ -234,5 +250,6 @@ def generate_asymmetric_euclidean_graph(num_nodes: int)->nx.classes.graph.Graph:
     pos = nx.get_node_attributes(G, "pos")
     for node in G_asym.nodes():
         G_asym.nodes()[node]["pos"] = pos[node]
+        G_asym.nodes()[node]["tag"] = tags[node]
 
     return G_asym

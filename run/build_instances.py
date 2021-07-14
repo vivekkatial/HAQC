@@ -7,11 +7,19 @@ if __name__ == "__main__":
     logging.info("Building Instances")
 
     # Global Variables
-    num_nodes = range(4,5)
+    num_nodes = range(4, 5)
     num_vehicles = range(1, 2)
     max_layers = range(2, 10)
-    instance_types = ["watts_strogatz", "complete", "newman_watts_strogatz"]
-    n_rand = 100
+    instance_types = [
+        "watts_strogatz",
+        "erdos_renyi",
+        "complete",
+        "newman_watts_strogatz",
+        "euclidean_tsp",
+        "euclidean_tsp_outlier",
+        "asymmetric_tsp",
+    ]
+    n_rand = 50
 
     for n in num_nodes:
         for v in num_vehicles:
