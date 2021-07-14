@@ -233,7 +233,12 @@ def solve_qubo_qaoa(qubo, p, points):
 
     op, offset = qubo.to_ising()
 
-    qaoa = QAOA(operator=op, p=p,  initial_point=list(2*np.pi*np.random.random(2*p)), optimizer=NELDER_MEAD())
+    qaoa = QAOA(
+        operator=op,
+        p=p,
+        initial_point=list(2 * np.pi * np.random.random(2 * p)),
+        optimizer=NELDER_MEAD(),
+    )
     # qaoa = QAOA(operator=op, p=p, initial_point=points, optimizer=NELDER_MEAD())
 
     quantum_instance = QuantumInstance(

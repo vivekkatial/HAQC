@@ -17,7 +17,7 @@ def compute_quantum_burden(qubos):
         quantum_burden_list = np.array(
             [max(0.0001, k["probability_success"]) for k in layer]
         )
-        
+
         # Compute sum
         quantum_burden = sum(1 / quantum_burden_list)
         # Extract of number of layers

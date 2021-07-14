@@ -30,7 +30,7 @@ def str2bool(v):
 
 @contextlib.contextmanager
 def make_temp_directory():
-    """Make temp directory """
+    """Make temp directory"""
     temp_dir = tempfile.mkdtemp()
     try:
         yield temp_dir
