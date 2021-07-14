@@ -1,6 +1,9 @@
 import networkx as nx
 import numpy as np
+import scipy
 
+def is_symmetric(A, tol=1e-8):
+    return scipy.sparse.linalg.norm(A-A.T, scipy.Inf) < tol
 
 def get_tsp_features(G):
     """
@@ -35,5 +38,6 @@ def get_tsp_features(G):
     features['tsp_std'] = np.std(nx.to_numpy_matrix(G, weight='cost'))
     features['tsp_frac_distinct_dist_one_dp'] = len(set(cost_one_dp))/len(cost_one_dp)
     features['tsp_clustering_coeff_variance'] = np.var([item[1] for item in nx.clustering(G).items()])
+    features['tsp_symmetric'] = is_symmetric(adj)
 
     return features

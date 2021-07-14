@@ -74,6 +74,12 @@ def instance_constructor(
 
     return instance
 
+def get_direction():
+    direction = np.random.randint(-1, 2) 
+    if direction == 0:
+        return get_direction()
+    else:
+        return direction
 
 def compile_and_write(
     num_nodes,
