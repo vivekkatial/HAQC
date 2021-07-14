@@ -1,10 +1,8 @@
 import networkx as nx
 import numpy as np
-import random
 import uuid
 
-from qaoa_vrp.utils import distance
-from qaoa_vrp.generators.generator_utils import get_direction
+from qaoa_vrp.utils import distance, get_direction
 
 
 def generate_random_instance(
@@ -40,9 +38,9 @@ def generate_random_instance(
         elif instance_type == "erdos_renyi":
             G = generate_erdos_renyi(num_nodes, num_vehicles)
         elif instance_type == "complete":
-            G = complete_graph(num_nodes, num_vehicles)
+            G = complete_graph(num_nodes)
         elif instance_type == "newman_watts_strogatz":
-            G = generate_newman_watts_strogatz_graph(num_nodes, num_vehicles)
+            G = generate_newman_watts_strogatz_graph(num_nodes)
         elif instance_type == "euclidean_tsp":
             G = generate_euclidean_graph(num_nodes)
         elif instance_type == "euclidean_tsp_outlier":
@@ -119,7 +117,7 @@ def generate_erdos_renyi(num_nodes, num_vehicles, p=0.5):
     return G
 
 
-def generate_newman_watts_strogatz_graph(num_nodes, k=2, p=0.5):
+def generate_newman_watts_strogatz_graph(num_nodes, k=4, p=0.5):
     """Build Newman Wattz Strogatz Graph"""
     G = nx.newman_watts_strogatz_graph(num_nodes, k, p)
     return G
@@ -250,6 +248,5 @@ def generate_asymmetric_euclidean_graph(num_nodes: int) -> nx.classes.graph.Grap
     pos = nx.get_node_attributes(G, "pos")
     for node in G_asym.nodes():
         G_asym.nodes()[node]["pos"] = pos[node]
-        G_asym.nodes()[node]["tag"] = tags[node]
 
     return G_asym

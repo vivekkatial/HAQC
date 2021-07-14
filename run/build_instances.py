@@ -12,14 +12,13 @@ if __name__ == "__main__":
     max_layers = range(2, 10)
     instance_types = [
         "watts_strogatz",
-        "erdos_renyi",
         "complete",
         "newman_watts_strogatz",
         "euclidean_tsp",
         "euclidean_tsp_outlier",
         "asymmetric_tsp",
     ]
-    n_rand = 50
+    n_rand = 70
 
     for n in num_nodes:
         for v in num_vehicles:

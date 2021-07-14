@@ -49,3 +49,11 @@ def read_instance(filename):
 def create_qaoa_params(threshold, n_max, p):
     qaoa_dict = {"q_threshold": threshold, "q_n_max": n_max, "q_p": p}
     return qaoa_dict
+
+
+def get_direction():
+    direction = np.random.randint(-1, 2)
+    if direction == 0:
+        return get_direction()
+    else:
+        return direction
