@@ -53,4 +53,14 @@ def get_tsp_features(G):
     )
     features['tsp_symmetric'] = is_symmetric(adj)
 
+    # Asymmetry features
+    diff = abs(adj - adj.T)
+    diff = diff.toarray()
+    features['tsp_asym_diff_matrix_sd'] = np.std(
+        diff[np.triu_indices(diff.shape[0], k=1)]
+    )
+    features['tsp_asym_diff_matrix_mean'] = np.mean(
+        diff[np.triu_indices(diff.shape[0], k=1)]
+    )
+
     return features

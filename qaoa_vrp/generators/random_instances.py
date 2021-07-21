@@ -6,15 +6,36 @@ from qaoa_vrp.utils import distance, get_direction
 
 
 def generate_random_instance(
-    num_nodes, num_vehicles, instance_type, num_outliers=1, gamma=2
-):
-    """
-    This function creates random graphs with each node having dimension of 2
+    num_nodes: int,
+    num_vehicles: int,
+    instance_type: str,
+    num_outliers: int = 1,
+    gamma: int = 2,
+    quasi: bool = False,
+    noise: float = 0.1,
+) -> nx.classes.graph.Graph:
+    """This function creates random graphs with each node having dimension of 2
 
     Args:
-        num_nodes (int): The number of nodes in the graph
+        num_nodes (int): [description]
+        num_vehicles (int): [description]
+        instance_type (str): Must be one of "watts_strogatz",
+            "erdos_renyi",
+            "complete",
+            "newman_watts_strogatz",
+            "euclidean_tsp",
+            "euclidean_tsp_outlier",
+            "asymmetric_tsp"
+        num_outliers (int, optional): [description]. Defaults to 1.
+        gamma (int, optional): [description]. Defaults to 2.
+        quasi (bool, optional): [description]. Defaults to False.
+        noise (float, optional): [description]. Defaults to 0.1.
+
+    Raises:
+        ValueError: [description]
+
     Returns:
-        G (object): Networkx graph object
+        nx.classes.graph.Graph: [description]
     """
 
     verify = False
@@ -48,10 +69,10 @@ def generate_random_instance(
                 num_nodes=num_nodes, num_outliers=num_outliers, gamma=gamma
             )
         elif instance_type == "asymmetric_tsp":
-            G = generate_asymmetric_euclidean_graph(num_nodes)
+            G = generate_asymmetric_euclidean_graph(num_nodes, quasi, noise)
 
         for (u, v) in G.edges():
-            if "euclidean" not in instance_type:
+            if "tsp" not in instance_type:
                 G.edges[u, v]["cost"] = round(np.random.random(), 2)
             G.edges[u, v]["id"] = uuid.uuid4().hex
 
@@ -215,14 +236,18 @@ def generate_euclidean_graph_with_outliers(
     return G
 
 
-def generate_asymmetric_euclidean_graph(num_nodes: int) -> nx.classes.graph.Graph:
-    """A function to generate an asymmetric where one half is a euclidean graph
+def generate_asymmetric_euclidean_graph(
+    num_nodes: int, quasi: bool = False, noise: float = 0.1
+) -> nx.classes.graph.Graph:
+    """A function to generate asymetric euclidean graph
 
     Args:
         num_nodes (int): Number of nodes
+        quasi (bool, optional): If graph is a quasi graph. Defaults to False.
+        noise (float, optional): Noise parameter. Defaults to 0.1.
 
     Returns:
-        nx.classes.graph.Graph: A graph object
+        nx.classes.graph.Graph: networkX Graph
     """
 
     # Generate random euclidean graph
@@ -235,16 +260,18 @@ def generate_asymmetric_euclidean_graph(num_nodes: int) -> nx.classes.graph.Grap
 
     # An asymmetric graph adjacency can be represented by:
     # A_{\text{asym}} = A - L(A) + A_{\text{rand}}
-    asymmetric_adj = adj.toarray() - np.tril(adj.toarray()) + rand
+    if quasi:
+        asymmetric_adj = adj + rand * noise
+    else:
+        asymmetric_adj = adj.toarray() - np.tril(adj.toarray()) + rand
+
     dt = [("cost", float)]
     asymmetric_adj = np.array(asymmetric_adj, dtype=dt)
 
     # Convert this adjacency matrix into a graph
     G_asym = nx.from_numpy_array(asymmetric_adj, create_using=nx.DiGraph)
-    nx.to_numpy_array(G_asym, weight="cost")
 
     # Update information regarding tags and position into the new graph
-    tags = nx.get_node_attributes(G, "tag")
     pos = nx.get_node_attributes(G, "pos")
     for node in G_asym.nodes():
         G_asym.nodes()[node]["pos"] = pos[node]
