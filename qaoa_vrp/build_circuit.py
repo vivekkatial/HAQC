@@ -176,9 +176,10 @@ def solve_qubo_qaoa(qubo, p, points, backend):
     elif backend == "matrix_product_state":
         method = QasmSimulator(method="matrix_product_state")
     
+    num_qubits = qubo.get_num_vars()
     quantum_instance = QuantumInstance(
         method,
-        shots=16384,
+        shots=(2**np.sqrt(num_qubits))*2048,
         seed_simulator=aqua_globals.random_seed,
         seed_transpiler=aqua_globals.random_seed,
     )
