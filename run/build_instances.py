@@ -17,8 +17,9 @@ if __name__ == "__main__":
         "euclidean_tsp",
         "euclidean_tsp_outlier",
         "asymmetric_tsp",
+        "quasi_asymmetric_tsp",
     ]
-    n_rand = 70
+    n_rand = 30
 
     for n in num_nodes:
         for v in num_vehicles:

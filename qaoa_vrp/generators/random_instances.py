@@ -25,7 +25,8 @@ def generate_random_instance(
             "newman_watts_strogatz",
             "euclidean_tsp",
             "euclidean_tsp_outlier",
-            "asymmetric_tsp"
+            "asymmetric_tsp",
+            "quasi_asymmetric_tsp"
         num_outliers (int, optional): [description]. Defaults to 1.
         gamma (int, optional): [description]. Defaults to 2.
         quasi (bool, optional): [description]. Defaults to False.
@@ -51,6 +52,7 @@ def generate_random_instance(
             "euclidean_tsp",
             "euclidean_tsp_outlier",
             "asymmetric_tsp",
+            "quasi_asymmetric_tsp",
         ]:
             raise ValueError("Incorrect Instance Type Requested")
 
@@ -70,6 +72,8 @@ def generate_random_instance(
             )
         elif instance_type == "asymmetric_tsp":
             G = generate_asymmetric_euclidean_graph(num_nodes, quasi, noise)
+        elif instance_type == "quasi_asymmetric_tsp":
+            G = generate_asymmetric_euclidean_graph(num_nodes, quasi=True, noise=noise)
 
         for (u, v) in G.edges():
             if "tsp" not in instance_type:
