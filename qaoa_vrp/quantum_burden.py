@@ -6,7 +6,7 @@ def compute_quantum_burden(qubos):
     # import pdb
     # pdb.set_trace()
 
-    evolutions = [qubo['evolution'] for qubo in qubos]
+    evolutions = [qubo["evolution"] for qubo in qubos]
     # print(evolutions)
     zipped = list(zip(*evolutions))
     # Initiate quantum dictionary
@@ -33,19 +33,19 @@ if __name__ == "__main__":
 
     # Define sample Qubos
     qubo_1 = {
-        'evolution': [
+        "evolution": [
             {"p": 1, "probability_success": 0},
             {"p": 2, "probability_success": 0.22},
         ]
     }
     qubo_2 = {
-        'evolution': [
+        "evolution": [
             {"p": 1, "probability_success": 0.11},
             {"p": 2, "probability_success": 0.22},
         ]
     }
     qubo_3 = {
-        'evolution': [
+        "evolution": [
             {"p": 1, "probability_success": 0.11},
             {"p": 2, "probability_success": 0.22},
         ]

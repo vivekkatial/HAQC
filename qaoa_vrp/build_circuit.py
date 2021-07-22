@@ -2,10 +2,10 @@ import base64
 import uuid
 from collections import defaultdict
 from itertools import count
-
 import networkx as nx
 import numpy as np
-from qiskit import BasicAer, execute
+from qiskit import Aer, execute
+from qiskit.providers.aer import QasmSimulator
 from qiskit.aqua import QuantumInstance, aqua_globals
 from qiskit.aqua.algorithms import QAOA, NumPyMinimumEigensolver
 from qiskit.aqua.components.optimizers import ADAM, AQGD, COBYLA, NELDER_MEAD
@@ -27,6 +27,7 @@ def build_qubos(clusters, depot_info, A=30):
     Returns:
         list: A list of QUBO formulations
     """
+
     qubos = []
     for subgraph in clusters:
         cluster = clusters[subgraph]
@@ -151,70 +152,7 @@ def build_qubos(clusters, depot_info, A=30):
         qubos.append(qubo)
     return qubos
 
-
-def qubo_to_qaoa(qubo, num_layers):
-    """Function to build QAOA circuit from QUBO formulations
-
-    Args:
-        qubo (object): Qiskit `QuadraticProgram` object
-        num_layers (int): Number of layers (p)
-
-    Returns:
-        [type]: A tuple where element [0] is a QAOA qiskit circuit object, and [1] is
-    """
-    op, offset = qubo.to_ising()
-
-    quantum_instance = QuantumInstance(
-        BasicAer.get_backend("statevector_simulator"),
-        seed_simulator=aqua_globals.random_seed,
-        seed_transpiler=aqua_globals.random_seed,
-    )
-
-    qaoa = QAOA(
-        operator=op,
-        p=num_layers,
-        quantum_instance=quantum_instance,
-        initial_point=list(2 * np.pi * np.random.random(2 * num_layers)),
-    )
-
-    # Create QAOA parameter list:
-    params_expr = []
-
-    for a in range(num_layers):  # "gamma_n" parameters
-        params_expr.append(Parameter("a" + str(a + 1)))
-
-    for b in range(num_layers):  # "beta_n" parameters
-        params_expr.append(Parameter("b" + str(b + 1)))
-
-    # Create qaoa circuit with arbitrary parameters
-    circuit = qaoa.construct_circuit(params_expr[0 : 2 * num_layers])[0]
-
-    return qaoa, circuit, params_expr
-
-
-def measure_energy(qubo, qc):
-    """Measure QAOA Circuit Energy
-
-    Args:
-        qubo (object): qiskit QUBO obejct
-        qc (object): qiskit QuantumCircuit object
-
-    Returns:
-        float : Energy of QC
-    """
-    state_vector = (
-        execute(qc, backend=Aer.get_backend("statevector_simulator"))
-        .result()
-        .get_statevector()
-    )
-    hamiltonian = qubo.to_ising()[0].to_matrix(massive=True)
-    ham_state = np.matmul(hamiltonian, state_vector)
-    energy = np.dot(ham_state, np.conjugate(state_vector))
-    energy = energy.real
-    return energy
-
-
-def solve_qubo_qaoa(qubo, p, points):
+def solve_qubo_qaoa(qubo, p, points, backend):
     """
     Create QAOA from given qubo, and solves for both the exact value and the QAOA
 
@@ -233,23 +171,30 @@ def solve_qubo_qaoa(qubo, p, points):
 
     op, offset = qubo.to_ising()
 
-    qaoa = QAOA(
-        operator=op,
-        p=p,
-        initial_point=list(2 * np.pi * np.random.random(2 * p)),
-        optimizer=NELDER_MEAD(),
-    )
-    # qaoa = QAOA(operator=op, p=p, initial_point=points, optimizer=NELDER_MEAD())
-
+    if backend == "statevector_simulator":
+        method = Aer.get_backend("statevector_simulator")
+    elif backend == "matrix_product_state":
+        method = QasmSimulator(method="matrix_product_state")
+    
     quantum_instance = QuantumInstance(
-        BasicAer.get_backend("statevector_simulator"),
+        method,
+        shots=16384,
         seed_simulator=aqua_globals.random_seed,
         seed_transpiler=aqua_globals.random_seed,
     )
 
-    qaoa_result = qaoa.run(quantum_instance)
+    qaoa_meas = QAOA(
+        quantum_instance=quantum_instance,
+        p=p,
+        initial_point=list(2 * np.pi * np.random.random(2 * p)),
+    )
 
-    return qaoa_result, exact_result, offset
+    qaoa = MinimumEigenOptimizer(qaoa_meas)
+    qaoa_result = qaoa.solve(qubo)
+
+    num_qubits = qaoa.min_eigen_solver.get_optimal_circuit().num_qubits
+
+    return qaoa_result, exact_result, offset, num_qubits
 
 
 def interp_point(optimal_point):
@@ -305,7 +250,7 @@ def index_to_selection(i, num_assets):
     return x
 
 
-def print_result(qubo, result, num_qubits, exact_value):
+def print_result(qubo, qaoa_result, num_qubits, exact_value, backend):
     """
     Prints the results of the QAOA in a nice form
 
@@ -315,12 +260,20 @@ def print_result(qubo, result, num_qubits, exact_value):
         num_qubits (int): the number of qubits in the QAOA circuit
     """
 
-    eigenvector = (
-        result.eigenstate
-        if isinstance(result.eigenstate, np.ndarray)
-        else result.eigenstate.to_matrix()
-    )
-    probabilities = np.abs(eigenvector) ** 2
+    if backend == "statevector_simulator":
+        eigenvector = (
+            qaoa_result.min_eigen_solver_result["eigenstate"]
+            if isinstance(qaoa_result.min_eigen_solver_result["eigenstate"], np.ndarray)
+            else qaoa_result.min_eigen_solver_result["eigenstate"].to_matrix()
+        )
+        probabilities = np.abs(eigenvector) ** 2
+    elif backend == "matrix_product_state":
+        probabilities = []
+        for eigenstate in qaoa_result.min_eigen_solver_result["eigenstate"]:
+            probabilities.append(
+                qaoa_result.min_eigen_solver_result["eigenstate"][eigenstate] / 1024
+            )
+
     i_sorted = reversed(np.argsort(probabilities))
     print("----------------- Full result ---------------------")
     print("index\tselection\t\tvalue\t\tprobability")
@@ -365,7 +318,6 @@ def assign_parameters(circuit, params_expr, params):
         {params_expr[i]: params[i] for i in range(len(params))}, inplace=False
     )
     return circuit2
-
 
 def to_hamiltonian_dicts(quadratic_program: QuadraticProgram):
     """
