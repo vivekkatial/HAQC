@@ -76,10 +76,6 @@ def solve_qaoa(
                 quadratic_terms,
             ) = qaoa_vrp.build_circuit.to_hamiltonian_dicts(qubo)
 
-            circuit_protobuf = qaoa_vrp.build_circuit.generate_circuit_pb(
-                num_nodes, linear_terms, quadratic_terms, gammas, betas
-            )
-
             optimal_value = qaoa_result["optimal_value"] + offset
 
             points = qaoa_vrp.build_circuit.interp_point(qaoa_result["optimal_point"])
@@ -103,7 +99,6 @@ def solve_qaoa(
                 evolution_p_data = {
                     "p": p,
                     "state": solution_data,
-                    "circuitB4": circuit_protobuf,
                     "probability_success": p_success,
                 }
                 # Attach evolution step
