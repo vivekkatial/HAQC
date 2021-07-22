@@ -18,6 +18,7 @@ mlflow = "*"
 pytest = "*"
 qaoa-vrp = {path = ".", editable = true}
 black = "*"
+seaborn = "*"
 
 [requires]
 python_version = "3.9"

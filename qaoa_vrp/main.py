@@ -70,7 +70,20 @@ def solve_qaoa(
                 backend,
             )
 
-            p_success = probability[0]
+            if num_nodes > 1:
+                p_success = probability[0] + probability[1]
+            else:
+                p_success = probability[0]
+
+            if raw_build:
+                # Evolution p_step
+                evolution_p_data = {
+                    "p": p,
+                    "state": solution_data,
+                    "probability_success": p_success,
+                }
+                # Attach evolution step
+                evolution_data.append(evolution_p_data)
 
             p += 1
             t_end = time.time()

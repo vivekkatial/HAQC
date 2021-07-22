@@ -318,3 +318,69 @@ def assign_parameters(circuit, params_expr, params):
         {params_expr[i]: params[i] for i in range(len(params))}, inplace=False
     )
     return circuit2
+
+def to_hamiltonian_dicts(quadratic_program: QuadraticProgram):
+    """
+    Converts a Qiskit QuadraticProgram for QAOA to pair of dictionaries representing the
+    Hamiltonian. Based on qiskit.optimization.QuadraticProgram.to_ising.
+
+    Args:
+        quadratic_program (QuadraticProgram): Qiskit QuadraticProgram representing a
+            QAOA problem
+
+    Returns:
+        num_nodes (int): Integer number of qubits
+        linear_terms (defaultdict[int, float]): Coefficients of Z_i terms in the
+            Hamiltonian.
+        quadratic_terms (defaultdict[Tuple[int, int], float]): Coefficients of Z_i Z_j
+            terms in the Hamiltonian
+    """
+
+    # if problem has variables that are not binary, raise an error
+    if quadratic_program.get_num_vars() > quadratic_program.get_num_binary_vars():
+        raise ValueError(
+            "The type of variable must be a binary variable. "
+            "Use a QuadraticProgramToQubo converter to convert "
+            "integer variables to binary variables. "
+            "If the problem contains continuous variables, "
+            "currently we can not apply VQE/QAOA directly. "
+            "you might want to use an ADMM optimizer "
+            "for the problem. "
+        )
+
+    # if constraints exist, raise an error
+    if quadratic_program.linear_constraints or quadratic_program.quadratic_constraints:
+        raise ValueError(
+            "An constraint exists. "
+            "The method supports only model with no constraints. "
+            "Use a QuadraticProgramToQubo converter. "
+            "It converts inequality constraints to equality "
+            "constraints, and then, it converters equality "
+            "constraints to penalty terms of the object function."
+        )
+
+    # initialize Hamiltonian.
+    num_nodes = quadratic_program.get_num_vars()
+
+    linear_terms = defaultdict(float)
+    quadratic_terms = defaultdict(float)
+
+    # set a sign corresponding to a maximized or minimized problem.
+    # sign == 1 is for minimized problem. sign == -1 is for maximized problem.
+    sense = quadratic_program.objective.sense.value
+
+    # convert linear parts of the object function into Hamiltonian.
+    for i, coeff in quadratic_program.objective.linear.to_dict().items():
+        linear_terms[i] -= sense * coeff / 2
+
+    # create Pauli terms
+    for pair, coeff in quadratic_program.objective.quadratic.to_dict().items():
+        weight = sense * coeff / 4
+
+        i, j = sorted(pair)
+        if i != j:
+            quadratic_terms[i, j] += weight
+        linear_terms[i] -= weight
+        linear_terms[j] -= weight
+
+    return num_nodes, linear_terms, quadratic_terms

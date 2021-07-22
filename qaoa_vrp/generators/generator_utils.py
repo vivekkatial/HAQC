@@ -26,7 +26,7 @@ def draw_graph_with_edge_weights(G):
 
 
 def np_encoder(object):
-    """Numpy encoder """
+    """Numpy encoder"""
     if isinstance(object, np.generic):
         return object.item()
 
