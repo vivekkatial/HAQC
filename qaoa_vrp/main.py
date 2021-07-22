@@ -26,7 +26,7 @@ from qaoa_vrp.quantum_burden import compute_quantum_burden
 
 
 def solve_qaoa(
-    i, qubo, p_max, threshold, n_max, mlflow_tracking, filename, backend, raw_build=True
+    i, qubo, p_max, n_max, backend, num_nodes, raw_build=True
 ):
     """
     This function is used as input to the parellelisation in run_vrp_instance
@@ -36,11 +36,9 @@ def solve_qaoa(
         i (int): the index of the parellel run
         qubo (object): qiskit qubo object
         p (int): the number of layers in the QAOA (p value)
-        mlflow_tracking (bool): Boolean to enable MlFlow tracking
     """
     evolution_data = []
     n = 0
-    n_run_probabilities = []
 
     while n < n_max:
         # Set p ticker
@@ -202,8 +200,9 @@ def run_vrp_instance(filename, backend, mlflow_tracking, raw_build=True):
             for index, node in enumerate(cluster_mapping)
             if node == i + 1 or node == 0
         ]
+        num_nodes=len(single_qubo_solution_data['cluster'])
         single_qubo_solution_data["evolution"] = solve_qaoa(
-            i, qubo, p_max, threshold, n_max, mlflow_tracking, filename, backend
+            i, qubo, p_max, n_max, backend, num_nodes
         )
 
         # Solution data for QUBO stuff
