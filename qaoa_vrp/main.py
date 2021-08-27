@@ -55,7 +55,7 @@ def solve_qaoa(
                 exact_result,
                 offset,
                 num_qubits,
-            ) = qaoa_vrp.build_circuit.solve_qubo_qaoa(qubo, p, points, backend)
+            ) = qaoa_vrp.build_circuit.solve_qubo_qaoa(qubo, p, backend, points)
 
             print(qaoa_result)
             print("Exact result (p={}): {}".format(p, exact_result.samples))

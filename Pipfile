@@ -19,6 +19,7 @@ pytest = "*"
 qaoa-vrp = {path = ".", editable = true}
 black = "*"
 seaborn = "*"
+pylatexenc = "*"
 
 [requires]
 python_version = "3.9"

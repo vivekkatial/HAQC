@@ -152,7 +152,7 @@ def build_qubos(clusters, depot_info, A=30):
         qubos.append(qubo)
     return qubos
 
-def solve_qubo_qaoa(qubo, p, points, backend):
+def solve_qubo_qaoa(qubo, p, backend, points=None):
     """
     Create QAOA from given qubo, and solves for both the exact value and the QAOA
 
