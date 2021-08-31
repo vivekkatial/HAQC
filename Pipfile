@@ -17,7 +17,6 @@ protobuf = "*"
 mlflow = "*"
 pytest = "*"
 qaoa-vrp = {path = ".", editable = true}
-black = "*"
 seaborn = "*"
 pylatexenc = "*"
 
