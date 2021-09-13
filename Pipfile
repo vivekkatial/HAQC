@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 ipykernel = "*"
 numpy = "*"
-qiskit = "==0.24.1"
 networkx = "*"
 matplotlib = "*"
 python-louvain = "*"
@@ -19,6 +18,7 @@ pytest = "*"
 qaoa-vrp = {path = ".", editable = true}
 seaborn = "*"
 pylatexenc = "*"
+qiskit = "*"
 
 [requires]
 python_version = "3.9"
