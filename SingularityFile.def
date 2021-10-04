@@ -78,7 +78,7 @@ From: python:3.9.2
   # Print valid arguments
   echo $instance
   # Run experiment
-  pipenv run python -W ignore qaoa_vrp/run_optimizers.py -f $instance -b 1000 -p 11 -T True
+  python -W ignore qaoa_vrp/run_optimizers.py -f $instance -b 1000 -p 11 -T True
 
 ####################################################
 # APP TO BUILD EXPERIMENTS
