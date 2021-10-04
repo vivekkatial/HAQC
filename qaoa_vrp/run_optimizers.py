@@ -147,6 +147,7 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
         mlflow.log_metric("ground_state_energy", exact_result.eigenvalue.real)
         mlflow.log_param("solution_objective", z)
 
+    print("Quantum Optimisation Starting")
     # Quantum solution
     p = 1
     while p < p_max:
@@ -157,10 +158,10 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
 
         optimizers = [
             SLSQP(maxiter=budget, disp=True, eps=0.001),
-            # COBYLA(maxiter=budget, disp=True, rhobeg=0.1), 
-            # NELDER_MEAD(maxfev=budget,disp=True,adaptive=True),
-            # SPSA(maxiter=budget,learning_rate=0.01,perturbation=0.01),
-            # L_BFGS_B(maxfun=budget,factr=10, epsilon=0.001,iprint=100)
+            COBYLA(maxiter=budget, disp=True, rhobeg=0.1), 
+            NELDER_MEAD(maxfev=budget,disp=True,adaptive=True),
+            SPSA(maxiter=budget,learning_rate=0.01,perturbation=0.01),
+            L_BFGS_B(maxfun=budget,factr=10, epsilon=0.001,iprint=100)
         ]
 
         # Make convergence counts and values
@@ -235,10 +236,10 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
         # Dictionary for different optimisers we're exploring
         optimizer_dict = {
             0: "SLSQP",
-            # 1: "COBYLA",
-            # 2: "NELDER_MEAD",
-            # 3: "SPSA",
-            # 4: "L_BFGS_B"
+            1: "COBYLA",
+            2: "NELDER_MEAD",
+            3: "SPSA",
+            4: "L_BFGS_B"
         }
 
         d_results = []
@@ -272,13 +273,12 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
             g.savefig(optimization_plot_p_fn)
 
             plt.clf()
-
             for ind in optimizer_dict.keys():
                 # Make feasibility graph
                 feasibility_p = plot_feasibility(min_energy_states[ind], exact_result)
                 feasibility_p_fn = f"feasibility_plot_opt_{optimizer_dict[ind]}_p_{p}.png"
                 feasibility_p_fn = os.path.join(temp_dir, feasibility_p_fn)
-                feasibility_p.savefig(feasibility_p_fn)
+                feasibility_p.figure.savefig(feasibility_p_fn, dpi=300, bbox_inches="tight")
 
             # Write results
             with open(results_layer_p_fn, "w") as file:
