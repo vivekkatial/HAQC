@@ -7,7 +7,7 @@ if __name__ == "__main__":
     logging.info("Building Instances")
 
     # Global Variables
-    num_nodes = range(4, 5)
+    num_nodes = range(5, 7)
     num_vehicles = range(1, 2)
     max_layers = range(2, 10)
     instance_types = [
@@ -19,7 +19,7 @@ if __name__ == "__main__":
         "asymmetric_tsp",
         "quasi_asymmetric_tsp",
     ]
-    n_rand = 30
+    n_rand = 5
 
     for n in num_nodes:
         for v in num_vehicles:

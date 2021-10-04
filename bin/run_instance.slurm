@@ -14,7 +14,7 @@
 ### SBATCH --mail-type=ALL
 
 # Load in Singularity Model
-module load Singularity/3.5.3-spartan_gcc-6.2.0
+module load singularity/3.6.3
 
 command_input=$1
 
