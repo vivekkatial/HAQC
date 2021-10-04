@@ -14,7 +14,7 @@
 ### SBATCH --mail-type=ALL
 
 # Load in Singularity Model
-module load singularity/3.6.3
+module load singularity/3.5.3
 
 command_input=$1
 
