@@ -19,6 +19,7 @@ qaoa-vrp = {path = ".", editable = true}
 seaborn = "*"
 pylatexenc = "*"
 qiskit = "*"
+boto3 = "*"
 
 [requires]
 python_version = "3.9"

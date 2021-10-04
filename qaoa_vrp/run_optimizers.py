@@ -1,4 +1,5 @@
 # Hide warnings
+from logging import FATAL
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -15,7 +16,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-import pylab
 
 # Custom Libraries
 import qaoa_vrp.build_graph
@@ -28,6 +28,9 @@ from qaoa_vrp.exp_utils import str2bool, make_temp_directory
 from qaoa_vrp.quantum_burden import compute_quantum_burden
 from qaoa_vrp.classical.greedy_tsp import greedy_tsp
 from qaoa_vrp.plot.draw_euclidean_graphs import draw_euclidean_graph
+from qaoa_vrp.plot.feasibility_graph import plot_feasibility
+from qaoa_vrp.features.graph_features import get_graph_features
+from qaoa_vrp.features.tsp_features import get_tsp_features
 
 # QISKIT stuff
 from qiskit import Aer
@@ -39,11 +42,10 @@ from qiskit.optimization.algorithms import MinimumEigenOptimizer
 from qiskit.optimization.applications.ising.common import sample_most_likely
 from qiskit.optimization.applications.ising import tsp
 
-filename="instanceType_euclidean_tsp_numNodes_4_numVehicles_1_87a170c748e240d0b71d5fb7fe7de707.json"
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-
-
-def run_instance(filename, budget: int, p_max=10):
+def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
     instance_path = "data/{}".format(filename)
     with open(instance_path) as f:
             data = json.load(f)
@@ -51,7 +53,30 @@ def run_instance(filename, budget: int, p_max=10):
     num_vehicles = int(data["numVehicles"])
     threshold = float(data["threshold"])
     n_max = int(data["n_max"])
+    # Read in parameter file
+    with open("config/mlflow_config.json") as file:
+        params = json.load(file)
+        
+    if mlflow_tracking:
+        # Configure MLFlow Stuff
+        mlflow.set_tracking_uri(params["experiment"]["tracking-uri"])
+        mlflow.set_experiment(params["experiment"]["name"])
 
+        # Build Graph Feature Vector
+        feature_vector = get_graph_features(G)
+        # Build TSP Feature Vector
+        tsp_feature_vector = get_tsp_features(G)
+        # Add num vehicles
+        feature_vector["num_vehicles"] = num_vehicles
+
+        # Log Params
+        mlflow.log_params(feature_vector)
+        mlflow.log_params(tsp_feature_vector)
+        mlflow.log_param("source", data["instance_type"])
+        mlflow.log_param("instance_uuid", filename)
+        mlflow.log_param("p_max", p_max)
+        # Log instance
+        mlflow.log_artifact(instance_path)
 
 
     edge_mat = nx.linalg.graphmatrix.adjacency_matrix(G).toarray()
@@ -109,6 +134,8 @@ def run_instance(filename, budget: int, p_max=10):
     exact_result = ee.run()
 
     print('energy:', exact_result.eigenvalue.real)
+    if mlflow_tracking:
+        mlflow.log_metric("ground_state_energy", exact_result.eigenvalue.real)
     print('tsp objective:', exact_result.eigenvalue.real + offset)
     x = sample_most_likely(exact_result.eigenstate)
     print('feasible:', tsp.tsp_feasible(x))
@@ -116,10 +143,13 @@ def run_instance(filename, budget: int, p_max=10):
     print('solution:', z)
     print('solution objective:', tsp.tsp_value(z, cost_mat))
 
+    if mlflow_tracking:
+        mlflow.log_metric("ground_state_energy", exact_result.eigenvalue.real)
+        mlflow.log_param("solution_objective", z)
+
     # Quantum solution
     p = 1
     while p < p_max:
-        
         # Initialise each budget parameter
 
         if p > 5:
@@ -127,32 +157,38 @@ def run_instance(filename, budget: int, p_max=10):
 
         optimizers = [
             SLSQP(maxiter=budget, disp=True, eps=0.001),
-            COBYLA(maxiter=budget, disp=True, rhobeg=0.1), 
-            NELDER_MEAD(maxfev=budget,disp=True,adaptive=True),
-            SPSA(maxiter=budget,learning_rate=0.01,perturbation=0.01),
-            L_BFGS_B(maxfun=budget,factr=10, epsilon=0.001,iprint=100)
+            # COBYLA(maxiter=budget, disp=True, rhobeg=0.1), 
+            # NELDER_MEAD(maxfev=budget,disp=True,adaptive=True),
+            # SPSA(maxiter=budget,learning_rate=0.01,perturbation=0.01),
+            # L_BFGS_B(maxfun=budget,factr=10, epsilon=0.001,iprint=100)
         ]
 
         # Make convergence counts and values
         converge_cnts = np.empty([len(optimizers)], dtype=object)
         converge_vals = np.empty([len(optimizers)], dtype=object)
+        min_energy_vals = np.empty([len(optimizers)], dtype=object)
+        min_energy_states = np.empty([len(optimizers)], dtype=object)
         backend = Aer.get_backend('aer_simulator_matrix_product_state')
 
         for i, optimizer in enumerate(optimizers):
             print('\rOptimizer: {}        '.format(type(optimizer).__name__))
             counts = []
             values = []
+            # Run energy and results
+            run_energy = []
+            run_results = []
             global global_count
             global_count = 0
             n_restart = 0
-            
+
             def store_intermediate_result(eval_count, parameters, mean, std):
                 global global_count
                 global_count += 1
                 counts.append(eval_count)
                 values.append(mean)
-                
+
             while global_count < budget:
+
                 # Increment n_restarts
                 n_restart += 1
                 # Initiate a random point uniformly from [0,1]
@@ -171,57 +207,133 @@ def run_instance(filename, budget: int, p_max=10):
                     initial_point = initial_point,
                     quantum_instance=quantum_instance
                 )
+
+                # Compute the QAOA result
                 result = qaoa.compute_minimum_eigenvalue(operator=op)
+
+                # Store in temp run info
+                run_energy.append(result.eigenvalue.real)
+                run_results.append(result.eigenstate)
+
+                # Append the minimum value from temp run info into doc
+                min_energy_vals[i] = min(run_energy)
+                if mlflow_tracking:
+                    mlflow.log_metric(key=f"{type(optimizer).__name__}_p_{p}", value=min(run_energy))
+
+                min_energy_ind = run_energy.index(min(run_energy))
+                min_energy_states[i] = run_results[min_energy_ind]
                 converge_cnts[i] = np.asarray(counts)
                 converge_vals[i] = np.asarray(values)
-        
-            # Create a dictionary for results
-            results_dict = {
-                "optimizer":None,
-                "n_eval": None,
-                "value": None
-            }
 
-            # Dictionary for different optimisers we're exploring
-            optimizer_dict = {
-                0: "NELDER_MEAD",
-                1: "COBYLA",
-            }
+        # Create a dictionary for results
+        results_dict = {
+            "optimizer":None,
+            "n_eval": None,
+            "value": None
+        }
 
-            d_results = []
+        # Dictionary for different optimisers we're exploring
+        optimizer_dict = {
+            0: "SLSQP",
+            # 1: "COBYLA",
+            # 2: "NELDER_MEAD",
+            # 3: "SPSA",
+            # 4: "L_BFGS_B"
+        }
 
-            for i,(evals, values) in enumerate(zip(converge_cnts, converge_vals)):
-                for cnt, val in zip(evals, values):
-                    results_dict_temp = results_dict.copy()
-                    results_dict_temp["n_eval"] = cnt
-                    results_dict_temp["value"] = val
-                    results_dict_temp["optimizer"] = optimizer_dict[i]
-                    d_results.append(results_dict_temp)
+        d_results = []
 
-            d_results = pd.DataFrame.from_records(d_results)
+        for i,(evals, values) in enumerate(zip(converge_cnts, converge_vals)):
+            for cnt, val in zip(evals, values):
+                results_dict_temp = results_dict.copy()
+                results_dict_temp["n_eval"] = cnt
+                results_dict_temp["value"] = val
+                results_dict_temp["optimizer"] = optimizer_dict[i]
+                d_results.append(results_dict_temp)
 
-            # Add counter for num_evals
-            d_results['total_evals']=d_results.groupby('optimizer').cumcount()
-            d_results.to_csv(f"../data/results_large_offset_{p}.csv")
+        d_results = pd.DataFrame.from_records(d_results)
 
-            # Create plots
-            g = sns.relplot(
-                data=d_results, x="total_evals", y="value",
-                col="optimizer", hue="optimizer",
-                kind="line"
+        # Add counter for num_evals
+        d_results['total_evals']=d_results.groupby('optimizer').cumcount()
+
+        with make_temp_directory() as temp_dir:
+            results_layer_p_fn = f"results_large_offset_p_{p}.csv"
+            results_layer_p_fn = os.path.join(
+                temp_dir, results_layer_p_fn
             )
 
-            (g.map(plt.axhline, y=-180, color=".7", dashes=(2, 1), zorder=0)
-            .tight_layout(w_pad=0))
+            # Create plots
+            g = sns.relplot(data=d_results, x="total_evals", y="value",col="optimizer", hue="optimizer",kind="line")
 
-            g.savefig('plot.png')
+            (g.map(plt.axhline, y=-180, color=".7", dashes=(2, 1), zorder=0).tight_layout(w_pad=0))
 
+            optimization_plot_p_fn = f"optimization_plot_p_{p}.png"
+            optimization_plot_p_fn = os.path.join(temp_dir, optimization_plot_p_fn)
+            g.savefig(optimization_plot_p_fn)
+
+            plt.clf()
+
+            for ind in optimizer_dict.keys():
+                # Make feasibility graph
+                feasibility_p = plot_feasibility(min_energy_states[ind], exact_result)
+                feasibility_p_fn = f"feasibility_plot_opt_{optimizer_dict[ind]}_p_{p}.png"
+                feasibility_p_fn = os.path.join(temp_dir, feasibility_p_fn)
+                feasibility_p.savefig(feasibility_p_fn)
+
+            # Write results
+            with open(results_layer_p_fn, "w") as file:
+                d_results.to_csv(file)
+
+            if mlflow_tracking:
+                mlflow.log_artifact(results_layer_p_fn)
+                mlflow.log_artifact(feasibility_p_fn)
+                mlflow.log_artifact(optimization_plot_p_fn)
 
         # Increment p        
         p += 1  
-            
+
     print('\rOptimization complete')
 
 
 if __name__ == "__main__":
-    run_instance(filename, budget=10, p_max=2)
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-f",
+        "--filename",
+        type=str,
+        required=True,
+        help="Filename of the instance graph to be run (file must be a .json)",
+    )
+
+    parser.add_argument(
+        "-b",
+        "--budget",
+        type=int,
+        default=100,
+        help="The budget for the optimziations (max function evals)",
+    )
+
+    parser.add_argument(
+        "-p",
+        "--p_max",
+        type=int,
+        default=2,
+        help="The number of layers,p, to compute for",
+    )
+
+    parser.add_argument(
+        "-T",
+        "--track_mlflow",
+        type=str2bool,
+        nargs="?",
+        const=True,
+        default=False,
+        help="Activate MlFlow Tracking.",
+    )    
+    args = vars(parser.parse_args())
+    t1 = time.time()
+    print(f"Run starting at: {time.ctime()}")
+    run_instance(args["filename"], budget=args["budget"], p_max=args["p_max"], mlflow_tracking=args["track_mlflow"])
+    t2 = time.time()
+    print("Run complete in: {} seconds".format(round(t2 - t1, 3)))
