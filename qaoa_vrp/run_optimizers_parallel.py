@@ -10,13 +10,16 @@ import json
 import time
 import networkx as nx
 import numpy as np
-from joblib import Parallel, delayed
+import concurrent.futures
 import mlflow
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import pathos.pools as pp
+
+plt.style.use('seaborn')
 
 # Custom Libraries
 import qaoa_vrp.build_graph
@@ -26,14 +29,15 @@ import qaoa_vrp.build_circuit
 import qaoa_vrp.clustering
 import qaoa_vrp.utils
 from qaoa_vrp.exp_utils import str2bool, make_temp_directory
-from qaoa_vrp.quantum_burden import compute_quantum_burden
-from qaoa_vrp.classical.greedy_tsp import greedy_tsp
-from qaoa_vrp.plot.draw_euclidean_graphs import draw_euclidean_graph
-from qaoa_vrp.plot.feasibility_graph import plot_feasibility
+from qaoa_vrp.plot.feasibility_graph import (
+    plot_feasibility_results,
+    generate_feasibility_results,
+)
 from qaoa_vrp.features.graph_features import get_graph_features
 from qaoa_vrp.features.tsp_features import get_tsp_features
+from qaoa_vrp.parallel.optimize_qaoa import run_qaoa_parallel
 
-# QISKIT stuff
+# Import Qiskit Dependencies
 from qiskit import Aer
 from qiskit.aqua import QuantumInstance, aqua_globals
 from qiskit.aqua.algorithms import QAOA, NumPyMinimumEigensolver
@@ -156,112 +160,58 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
 
         # Initialise each budget parameter
         if p > 5:
-            budget = 2000
+            budget = p * 500
 
+        # Initiate optimizers for a parallel run
         optimizers = [
-            # SLSQP(maxiter=budget, disp=True, eps=0.001),
-            COBYLA(maxiter=budget, disp=True, rhobeg=0.1),
-            # NELDER_MEAD(maxfev=budget, disp=True, adaptive=True),
-            # L_BFGS_B(maxfun=budget, factr=10, epsilon=0.001, iprint=100),
+            [
+                SLSQP(maxiter=budget, disp=True, eps=0.001),
+                budget,
+                op,
+                p,
+                mlflow_tracking,
+            ],
+            [
+                COBYLA(maxiter=budget, disp=True, rhobeg=0.1),
+                budget,
+                op,
+                p,
+                mlflow_tracking,
+            ],
+            [
+                NELDER_MEAD(maxfev=budget, disp=True, adaptive=True, tol=0.001),
+                budget,
+                op,
+                p,
+                mlflow_tracking,
+            ],
+            [
+                L_BFGS_B(maxfun=budget, factr=10, epsilon=0.001, iprint=100),
+                budget,
+                op,
+                p,
+                mlflow_tracking,
+            ],
         ]
 
-        # Make convergence counts and values
-        converge_cnts = np.empty([len(optimizers)], dtype=object)
-        converge_vals = np.empty([len(optimizers)], dtype=object)
-        min_energy_vals = np.empty([len(optimizers)], dtype=object)
-        min_energy_states = np.empty([len(optimizers)], dtype=object)
-        backend = Aer.get_backend('aer_simulator_matrix_product_state')
-        # mps_algo = "mps_apply_measure"
-        # mps_algo = "mps_probabilities"
-        print(f"Setting MPS Sample Measure Algorithim to be: {mps_algo}")
-        backend.set_option("mps_sample_measure_algorithm", mps_algo)
+        with pp.ProcessPool() as pool:
+            print("Starting Parallel Run")
+            results = pool.map(run_qaoa_parallel, optimizers)
+            print("Ending Parallel Run")
 
-        for i, optimizer in enumerate(optimizers):
-            print('\rOptimizer: {}        '.format(type(optimizer).__name__))
-            counts = []
-            values = []
-            # Run energy and results
-            run_energy = []
-            run_results = []
-            global global_count
-            global_count = 0
-            n_restart = 0
-
-            def store_intermediate_result(eval_count, parameters, mean, std):
-                global global_count
-                global_count += 1
-                counts.append(eval_count)
-                values.append(mean)
-
-            while global_count < budget:
-
-                # Increment n_restarts
-                n_restart += 1
-                # Initiate a random point uniformly from [0,1]
-                initial_point = [np.random.uniform(0, 1) for i in range(2 * p)]
-                # Set random seed
-                aqua_globals.random_seed = np.random.default_rng(123)
-                seed = 10598
-                # Initate quantum instance
-                quantum_instance = QuantumInstance(
-                    backend,
-                    seed_simulator=seed,
-                    seed_transpiler=seed,
-                )
-                # Initate QAOA
-                qaoa = QAOA(
-                    operator=op,
-                    optimizer=optimizer,
-                    callback=store_intermediate_result,
-                    p=p,
-                    initial_point=initial_point,
-                    quantum_instance=quantum_instance,
-                )
-
-                # Compute the QAOA result
-                result = qaoa.compute_minimum_eigenvalue(operator=op)
-
-                # Store in temp run info
-                run_energy.append(result.eigenvalue.real)
-                run_results.append(result.eigenstate)
-
-                # Append the minimum value from temp run info into doc
-                min_energy_vals[i] = min(run_energy)
-                if mlflow_tracking:
-                    mlflow.log_metric(
-                        key=f"{type(optimizer).__name__}_p_{p}", value=min(run_energy)
-                    )
-
-                min_energy_ind = run_energy.index(min(run_energy))
-                min_energy_states[i] = run_results[min_energy_ind]
-                converge_cnts[i] = np.asarray(counts)
-                converge_vals[i] = np.asarray(values)
-
-        # Create a dictionary for results
-        results_dict = {"optimizer": None, "n_eval": None, "value": None}
-
-        # Dictionary for different optimisers we're exploring
-        optimizer_dict = {
-            # 0: "SLSQP",
-            0: "COBYLA",
-            # 0: "NELDER_MEAD",
-            # 4: "L_BFGS_B"
-        }
-
+        # Clean up results
         d_results = []
+        for res in results:
+            d_res = pd.DataFrame(
+                list(zip(res['converge_cnts'], res['converge_vals'])),
+                columns=['n_eval', 'value'],
+            )
+            d_res["optimizer"] = res["optimizer"]
+            d_results.append(d_res)
+        d_results = pd.concat(d_results)
 
-        for i, (evals, values) in enumerate(zip(converge_cnts, converge_vals)):
-            for cnt, val in zip(evals, values):
-                results_dict_temp = results_dict.copy()
-                results_dict_temp["n_eval"] = cnt
-                results_dict_temp["value"] = val
-                results_dict_temp["optimizer"] = optimizer_dict[i]
-                d_results.append(results_dict_temp)
-
-        d_results = pd.DataFrame.from_records(d_results)
-
-        # Add counter for num_evals
-        d_results['total_evals'] = d_results.groupby('optimizer').cumcount()
+        # Add counter for num_evals (+1 so it matches up with n_eval)
+        d_results['total_evals'] = d_results.groupby('optimizer').cumcount() + 1
 
         with make_temp_directory() as temp_dir:
             results_layer_p_fn = f"results_large_offset_p_{p}.csv"
@@ -276,36 +226,40 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
                 hue="optimizer",
                 kind="line",
             )
-
-            (
-                g.map(
-                    plt.axhline, y=-180, color=".7", dashes=(2, 1), zorder=0
-                ).tight_layout(w_pad=0)
-            )
+            axes = g.axes.flatten()
+            for ax in axes:
+                ax.axhline(
+                    exact_result.eigenvalue.real, ls='--', linewidth=3, color='grey'
+                )
+                ax.set_xlabel("Function Evals")
 
             optimization_plot_p_fn = f"optimization_plot_p_{p}.png"
             optimization_plot_p_fn = os.path.join(temp_dir, optimization_plot_p_fn)
             g.savefig(optimization_plot_p_fn)
 
             plt.clf()
-            for ind in optimizer_dict.keys():
+            for res in results:
                 # Make feasibility graph
-                feasibility_p = plot_feasibility(min_energy_states[ind], exact_result)
-                feasibility_p_fn = (
-                    f"feasibility_plot_opt_{optimizer_dict[ind]}_p_{p}.png"
+                feasibility_p_res = generate_feasibility_results(
+                    res["min_energy_state"], exact_result
                 )
+                feasibility_p = plot_feasibility_results(feasibility_p_res)
+                feasibility_p_fn = f"feasibility_plot_opt_{res['optimizer']}_p_{p}.png"
                 feasibility_p_fn = os.path.join(temp_dir, feasibility_p_fn)
                 feasibility_p.figure.savefig(
                     feasibility_p_fn, dpi=300, bbox_inches="tight"
                 )
 
+                # Track on MLFlow for each optimizer
+                if mlflow_tracking:
+                    mlflow.log_artifact(feasibility_p_fn)
+
             # Write results
             with open(results_layer_p_fn, "w") as file:
-                d_results.to_csv(file)
+                d_results.to_csv(file, index=False)
 
             if mlflow_tracking:
                 mlflow.log_artifact(results_layer_p_fn)
-                mlflow.log_artifact(feasibility_p_fn)
                 mlflow.log_artifact(optimization_plot_p_fn)
 
         # Increment p

@@ -152,6 +152,7 @@ def build_qubos(clusters, depot_info, A=30):
         qubos.append(qubo)
     return qubos
 
+
 def solve_qubo_qaoa(qubo, p, backend, points=None):
     """
     Create QAOA from given qubo, and solves for both the exact value and the QAOA
@@ -175,11 +176,11 @@ def solve_qubo_qaoa(qubo, p, backend, points=None):
         method = Aer.get_backend("statevector_simulator")
     elif backend == "matrix_product_state":
         method = QasmSimulator(method="matrix_product_state")
-    
+
     num_qubits = qubo.get_num_vars()
     quantum_instance = QuantumInstance(
         method,
-        shots=(2**np.sqrt(num_qubits))*2048,
+        shots=(2 ** np.sqrt(num_qubits)) * 2048,
         seed_simulator=aqua_globals.random_seed,
         seed_transpiler=aqua_globals.random_seed,
     )
@@ -319,6 +320,7 @@ def assign_parameters(circuit, params_expr, params):
         {params_expr[i]: params[i] for i in range(len(params))}, inplace=False
     )
     return circuit2
+
 
 def to_hamiltonian_dicts(quadratic_program: QuadraticProgram):
     """
