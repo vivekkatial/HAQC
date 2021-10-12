@@ -4,7 +4,7 @@
 ###SBATCH -p cloud
 
 # For R need to run on single CPU
-#SBATCH --ntasks=1
+#SBATCH --ntasks=4
 
 # set your minimum acceptable walltime=hours:minutes:seconds
 #SBATCH -t 00-23:59:59
