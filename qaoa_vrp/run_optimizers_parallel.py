@@ -157,10 +157,8 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
     while p < p_max:
 
         print(f"Quantum Optimisation Starting for p={p}")
-
         # Initialise each budget parameter
-        if p > 5:
-            budget = p * 500
+        budget = p * 500
 
         # Initiate optimizers for a parallel run
         optimizers = [
