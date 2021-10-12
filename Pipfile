@@ -20,6 +20,7 @@ seaborn = "*"
 pylatexenc = "*"
 qiskit = "*"
 boto3 = "*"
+pathos = "*"
 
 [requires]
 python_version = "3.9"

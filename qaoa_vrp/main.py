@@ -25,9 +25,7 @@ from qaoa_vrp.exp_utils import str2bool, make_temp_directory
 from qaoa_vrp.quantum_burden import compute_quantum_burden
 
 
-def solve_qaoa(
-    i, qubo, p_max, n_max, backend, num_nodes, raw_build=True
-):
+def solve_qaoa(i, qubo, p_max, n_max, backend, num_nodes, raw_build=True):
     """
     This function is used as input to the parellelisation in run_vrp_instance
     It obtains the exact and QAOA results and prints them, in parellel for each subtour
@@ -200,7 +198,7 @@ def run_vrp_instance(filename, backend, mlflow_tracking, raw_build=True):
             for index, node in enumerate(cluster_mapping)
             if node == i + 1 or node == 0
         ]
-        num_nodes=len(single_qubo_solution_data['cluster'])
+        num_nodes = len(single_qubo_solution_data['cluster'])
         single_qubo_solution_data["evolution"] = solve_qaoa(
             i, qubo, p_max, n_max, backend, num_nodes
         )

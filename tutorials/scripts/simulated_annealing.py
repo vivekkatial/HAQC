@@ -6,7 +6,15 @@ import pdb
 
 
 class SimulatedAnnealer(object):
-    def __init__(self, initial_coords, starting_city=0, T=-1, alpha=-1, stopping_T=-1, stopping_iter=-1):
+    def __init__(
+        self,
+        initial_coords,
+        starting_city=0,
+        T=-1,
+        alpha=-1,
+        stopping_T=-1,
+        stopping_iter=-1,
+    ):
         self.initial_coords = initial_coords
         self.starting_city = starting_city
         self.coords = np.delete(initial_coords, starting_city, axis=0)
@@ -22,7 +30,9 @@ class SimulatedAnnealer(object):
         self.dist_matrix = self.to_dist_matrix(coords)
         full_dist_matrix = np.array(self.to_dist_matrix(self.initial_coords))
 
-        self.dist_to_starting_city = np.delete(full_dist_matrix[:, starting_city], starting_city, axis=0)
+        self.dist_to_starting_city = np.delete(
+            full_dist_matrix[:, starting_city], starting_city, axis=0
+        )
         self.nodes = [i for i in range(self.N)]
 
         self.cur_solution = self.initial_solution()
@@ -56,7 +66,12 @@ class SimulatedAnnealer(object):
         """
         Euclidean distance
         """
-        return round(math.sqrt(math.pow(coord1[0] - coord2[0], 2) + math.pow(coord1[1] - coord2[1], 2)), 4)
+        return round(
+            math.sqrt(
+                math.pow(coord1[0] - coord2[0], 2) + math.pow(coord1[1] - coord2[1], 2)
+            ),
+            4,
+        )
 
     def to_dist_matrix(self, coords):
         """
@@ -69,9 +84,12 @@ class SimulatedAnnealer(object):
         return mat
 
     def fitness(self, sol):
-        """ Objective value of a solution """
-        return round(sum([self.dist_matrix[sol[i - 1]][sol[i]] for i in range(1, self.N)]) +
-                     self.dist_to_starting_city[sol[0]], 4)
+        """Objective value of a solution"""
+        return round(
+            sum([self.dist_matrix[sol[i - 1]][sol[i]] for i in range(1, self.N)])
+            + self.dist_to_starting_city[sol[0]],
+            4,
+        )
 
     def p_accept(self, candidate_fitness):
         """
@@ -102,11 +120,13 @@ class SimulatedAnnealer(object):
         """
         Execute simulated annealing algorithm
         """
-        while self.T >= self.stopping_temperature and self.iteration < self.stopping_iter:
+        while (
+            self.T >= self.stopping_temperature and self.iteration < self.stopping_iter
+        ):
             candidate = list(self.cur_solution)
             l = random.randint(2, self.N - 1)
             i = random.randint(0, self.N - l)
-            candidate[i:(i + l)] = reversed(candidate[i:(i + l)])
+            candidate[i : (i + l)] = reversed(candidate[i : (i + l)])
             self.accept(candidate)
             self.T *= self.alpha
             self.iteration += 1
@@ -153,6 +173,7 @@ def main():
     sa.anneal()
     solution = sa.get_best_solution()
     print(solution)
+
 
 if __name__ == '__main__':
     main()
