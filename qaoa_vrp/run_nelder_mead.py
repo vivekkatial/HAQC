@@ -159,7 +159,7 @@ def run_nelder_mead_instance(filename, max_restarts: int, p_max=10, mlflow_track
             NELDER_MEAD(
                 disp=True, 
                 adaptive=True, 
-                tol=0.05,
+                tol=0.1,
                 maxfev=10000
                 ),
             max_restarts,
