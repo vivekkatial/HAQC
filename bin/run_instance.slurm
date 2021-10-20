@@ -21,4 +21,4 @@ command_input=$1
 echo "Running Experiment on log file $command_input"
 
 # The command to actually run the job
-singularity run --app run_experiment qaoa_vrp.img $command_input
+singularity run --app run_optimizer qaoa_vrp.img $command_input
