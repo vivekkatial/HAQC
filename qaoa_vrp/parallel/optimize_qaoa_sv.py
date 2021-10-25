@@ -11,7 +11,7 @@ import pandas as pd
 import seaborn as sns
 from qaoa_vrp.exp_utils import make_temp_directory
 
-def run_qaoa_parallel(args):
+def run_qaoa_parallel_control_max_restarts_sv(args):
     optimizer, budget, op, p, mlflow_tracking = (
         args[0],
         args[1],
@@ -20,7 +20,7 @@ def run_qaoa_parallel(args):
         args[4],
     )
     print('\r Running Optimizer: {} in parallel'.format(type(optimizer).__name__))
-    backend = Aer.get_backend('aer_simulator_matrix_product_state')
+    backend = Aer.get_backend('aer_simulator_statevector')
     counts = []
     values = []
     # Run energy and results
@@ -60,6 +60,8 @@ def run_qaoa_parallel(args):
             quantum_instance=quantum_instance,
         )
 
+        
+
         # Compute the QAOA result
         result = qaoa.compute_minimum_eigenvalue(operator=op)
 
@@ -91,7 +93,7 @@ def run_qaoa_parallel(args):
     return results
 
 
-def run_qaoa_parallel_control_max_restarts(args):
+def run_qaoa_parallel_control_max_restarts_sv(args):
     optimizer, max_restarts, op, p, mlflow_tracking = (
         args[0],
         args[1],
@@ -100,7 +102,7 @@ def run_qaoa_parallel_control_max_restarts(args):
         args[4],
     )
     print(f'\r Running Optimizer: {type(optimizer).__name__} in parallel with {p} layers and {max_restarts} restarts')
-    backend = Aer.get_backend('aer_simulator_matrix_product_state')
+    backend = Aer.get_backend('aer_simulator_statevector')
     counts = []
     values = []
     # Run energy and results
@@ -169,9 +171,10 @@ def run_qaoa_parallel_control_max_restarts(args):
         plt.axhline(y=-180,ls="--",color="grey")
         
         # Build and store on MLFLow
-        layer_opt_fn=f"optimization_plot_layer_{p}.png"
-        g.savefig(layer_opt_fn)
-        mlflow.log_artifact(layer_opt_fn)
+        with make_temp_directory() as temp_dir:
+            layer_opt_fn=f"optimization_plot_layer_{p}.png"
+            g.savefig(layer_opt_fn)
+            mlflow.log_artifact(layer_opt_fn)
 
     print(
         '\r Ending run for  Optimizer: {} in parallel'.format(type(optimizer).__name__)

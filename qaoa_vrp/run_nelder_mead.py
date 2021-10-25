@@ -203,7 +203,7 @@ def run_nelder_mead_instance(filename, max_restarts: int, p_max=10, mlflow_track
                     ax.set_xlabel("Function Evals")
 
         optimization_plot_fn = f"optimization_plot.png"
-        optimization_plot_fn = os.path.join(temp_dir, optimization_plot_fn)
+        optimization_plot_fn = osf.path.join(temp_dir, optimization_plot_fn)
         g.savefig(optimization_plot_fn)
 
         plt.clf()
