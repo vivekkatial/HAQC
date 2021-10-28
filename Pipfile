@@ -21,6 +21,7 @@ pylatexenc = "*"
 qiskit = "*"
 boto3 = "*"
 pathos = "*"
+qiskit-optimization = "*"
 
 [requires]
 python_version = "3.9"

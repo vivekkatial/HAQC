@@ -11,7 +11,7 @@ import pandas as pd
 import seaborn as sns
 from qaoa_vrp.exp_utils import make_temp_directory
 
-def run_qaoa_parallel_control_max_restarts_sv(args):
+def run_qaoa_parallel_sv(args):
     optimizer, budget, op, p, mlflow_tracking = (
         args[0],
         args[1],
@@ -20,7 +20,7 @@ def run_qaoa_parallel_control_max_restarts_sv(args):
         args[4],
     )
     print('\r Running Optimizer: {} in parallel'.format(type(optimizer).__name__))
-    backend = Aer.get_backend('aer_simulator_statevector')
+    backend = Aer.get_backend("statevector_simulator")
     counts = []
     values = []
     # Run energy and results
@@ -59,8 +59,6 @@ def run_qaoa_parallel_control_max_restarts_sv(args):
             initial_point=initial_point,
             quantum_instance=quantum_instance,
         )
-
-        
 
         # Compute the QAOA result
         result = qaoa.compute_minimum_eigenvalue(operator=op)
