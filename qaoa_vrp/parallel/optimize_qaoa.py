@@ -11,6 +11,7 @@ import pandas as pd
 import seaborn as sns
 from qaoa_vrp.exp_utils import make_temp_directory
 
+
 def run_qaoa_parallel(args):
     optimizer, budget, op, p, mlflow_tracking = (
         args[0],
@@ -99,7 +100,9 @@ def run_qaoa_parallel_control_max_restarts(args):
         args[3],
         args[4],
     )
-    print(f'\r Running Optimizer: {type(optimizer).__name__} in parallel with {p} layers and {max_restarts} restarts')
+    print(
+        f'\r Running Optimizer: {type(optimizer).__name__} in parallel with {p} layers and {max_restarts} restarts'
+    )
     backend = Aer.get_backend('aer_simulator_matrix_product_state')
     counts = []
     values = []
@@ -159,17 +162,17 @@ def run_qaoa_parallel_control_max_restarts(args):
     # Produce plots for optimizations at each layer
     if mlflow_tracking:
         # Construct data for plot
-        d = pd.DataFrame(list(zip(counts,values)), columns=["feval", "energy"])
+        d = pd.DataFrame(list(zip(counts, values)), columns=["feval", "energy"])
         # Add counter columns
-        inds = [i+1 for i in range(len(counts))]
+        inds = [i + 1 for i in range(len(counts))]
         d["counts"] = inds
 
         # Produce Seaborn chart
         g = sns.relplot(data=d, x="counts", y="energy", kind="line")
-        plt.axhline(y=-180,ls="--",color="grey")
-        
+        plt.axhline(y=-180, ls="--", color="grey")
+
         # Build and store on MLFLow
-        layer_opt_fn=f"optimization_plot_layer_{p}.png"
+        layer_opt_fn = f"optimization_plot_layer_{p}.png"
         g.savefig(layer_opt_fn)
         mlflow.log_artifact(layer_opt_fn)
 

@@ -89,15 +89,28 @@ import math as math
 from qiskit import QiskitError
 from qiskit.algorithms import QAOA
 from qiskit.algorithms.exceptions import AlgorithmError
-from qiskit.algorithms.minimum_eigen_solvers.minimum_eigen_solver import MinimumEigensolverResult
+from qiskit.algorithms.minimum_eigen_solvers.minimum_eigen_solver import (
+    MinimumEigensolverResult,
+)
 from qiskit.algorithms.minimum_eigen_solvers.vqe import VQE
 from qiskit.algorithms.optimizers import Optimizer
-from qiskit.algorithms.variational_algorithm import VariationalAlgorithm, VariationalResult
+from qiskit.algorithms.variational_algorithm import (
+    VariationalAlgorithm,
+    VariationalResult,
+)
 from qiskit.circuit import ClassicalRegister, Parameter, QuantumCircuit
 from qiskit.circuit.library.n_local.qaoa_ansatz import QAOAAnsatz
-#from qiskit.algorithms.minimum_eigen_solvers
-from qiskit.opflow import (CircuitSampler, CircuitStateFn, DictStateFn,
-                           ExpectationBase, I, OperatorBase, StateFn)
+
+# from qiskit.algorithms.minimum_eigen_solvers
+from qiskit.opflow import (
+    CircuitSampler,
+    CircuitStateFn,
+    DictStateFn,
+    ExpectationBase,
+    I,
+    OperatorBase,
+    StateFn,
+)
 from qiskit.opflow.exceptions import OpflowError
 from qiskit.opflow.gradients import GradientBase
 from qiskit.providers import Backend, BaseBackend
@@ -116,27 +129,34 @@ logger = logging.getLogger(__name__)
 ### Classes
 ###############
 
+
 class CircuitSamplerCustom(CircuitSampler):
     # a function pointer that processes returned results from execution when sample_circuits is called.
     # post_process_raw_data(Result) -> Result
-    _post_process_raw_data: Optional[Callable[[Union[List[Dict[str, int]], List[List[Dict[str, int]]]]], Union[List[Dict[str, int]], List[List[Dict[str, int]]]]]] = None
+    _post_process_raw_data: Optional[
+        Callable[
+            [Union[List[Dict[str, int]], List[List[Dict[str, int]]]]],
+            Union[List[Dict[str, int]], List[List[Dict[str, int]]]],
+        ]
+    ] = None
     _shots = None
     _log_text = print
     _force_shots = False
     _sampler_name = ""
     _output_circuit_when_sample = False
 
-    def __init__(self,
-                 backend: Union[Backend, BaseBackend, QuantumInstance],
-                 statevector: Optional[bool] = None,
-                 param_qobj: bool = False,
-                 attach_results: bool = False,
-                 caching: str = 'last',
-                 sampler_name: str = "",
-                 force_shots: bool = False,
-                 output_circuit_when_sample: bool = False,
-                 log_text: Optional[Callable[..., Any]] = print
-                ) -> None:
+    def __init__(
+        self,
+        backend: Union[Backend, BaseBackend, QuantumInstance],
+        statevector: Optional[bool] = None,
+        param_qobj: bool = False,
+        attach_results: bool = False,
+        caching: str = 'last',
+        sampler_name: str = "",
+        force_shots: bool = False,
+        output_circuit_when_sample: bool = False,
+        log_text: Optional[Callable[..., Any]] = print,
+    ) -> None:
         """
         Args:
             backend: The quantum backend or QuantumInstance to use to sample the circuits.
@@ -158,11 +178,13 @@ class CircuitSamplerCustom(CircuitSampler):
         Raises:
             ValueError: Set statevector or param_qobj True when not supported by backend.
         """
-        super().__init__(backend=backend,
-                         statevector=statevector,
-                         param_qobj=param_qobj,
-                         attach_results=attach_results,
-                         caching=caching)
+        super().__init__(
+            backend=backend,
+            statevector=statevector,
+            param_qobj=param_qobj,
+            attach_results=attach_results,
+            caching=caching,
+        )
 
         self._sampler_name = sampler_name
         self._log_text = log_text
@@ -171,25 +193,32 @@ class CircuitSamplerCustom(CircuitSampler):
         self._force_shots = force_shots
         self._output_circuit_when_sample = output_circuit_when_sample
 
-    def set_post_process_raw_data(self, 
-                                  post_process_raw_data_method: Optional[Callable[[Union[List[Dict[str, int]], List[List[Dict[str, int]]]]], Union[List[Dict[str, int]], List[List[Dict[str, int]]]]]]
-                                 ) -> None:
-        """ Uses the specified method to process the raw sampled data executed on the backened whenever circuits are sampled.
+    def set_post_process_raw_data(
+        self,
+        post_process_raw_data_method: Optional[
+            Callable[
+                [Union[List[Dict[str, int]], List[List[Dict[str, int]]]]],
+                Union[List[Dict[str, int]], List[List[Dict[str, int]]]],
+            ]
+        ],
+    ) -> None:
+        """Uses the specified method to process the raw sampled data executed on the backened whenever circuits are sampled.
         Args:
-            post_process_raw_data_method: The method to process the data. 
+            post_process_raw_data_method: The method to process the data.
                Inputs a list f counts dicts List[Dict[str, int]] and outputs the processed list of count dicts List[Dict[str, int]].
                The data could potentially be formatted as a list of a list of dictionaries List[List[Dict[str, int]]]. However, this
                will likely not happen withouth modifying QAOA to do so.
                Each dictionary has the counts for each qubit with the keys containing a string in binary format and separated
                according to the registers in circuit (e.g. ``0100 1110``). The string is little-endian (cr[0] on the right hand side).
-               However there will likely only be a single register without modifying QAOA, so the state bitstring should have no spaces. 
+               However there will likely only be a single register without modifying QAOA, so the state bitstring should have no spaces.
         """
         self._post_process_raw_data = post_process_raw_data_method
 
-    def sample_circuits(self,
-                        circuit_sfns: Optional[List[CircuitStateFn]] = None,
-                        param_bindings: Optional[List[Dict[Parameter, float]]] = None
-                       ) -> Dict[int, List[StateFn]]:
+    def sample_circuits(
+        self,
+        circuit_sfns: Optional[List[CircuitStateFn]] = None,
+        param_bindings: Optional[List[Dict[Parameter, float]]] = None,
+    ) -> Dict[int, List[StateFn]]:
         r"""
             Samples the CircuitStateFns and returns a dict associating their ``id()`` values to their
             replacement DictStateFn or VectorStateFn. If param_bindings is provided,
@@ -215,7 +244,6 @@ class CircuitSamplerCustom(CircuitSampler):
         # can even manually transpile to specific qubit layout.
         #############
 
-
         if circuit_sfns:
             self._transpiled_circ_templates = None
             if self._statevector:
@@ -227,7 +255,7 @@ class CircuitSamplerCustom(CircuitSampler):
             if self._output_circuit_when_sample == True:
                 filename = "quantum-circuit-" + self._sampler_name + "-params"
                 for _, value in param_bindings[0].items():
-                    filename += "-" + str(int(1000*value))
+                    filename += "-" + str(int(1000 * value))
                 if self._log_text != None:
                     self._log_text("Saving circuit '" + filename + "'...")
                 fig = circuit_drawer(circuits[0], filename=filename, output='mpl')
@@ -237,9 +265,11 @@ class CircuitSamplerCustom(CircuitSampler):
             try:
                 self._transpiled_circ_cache = self.quantum_instance.transpile(circuits)
             except QiskitError:
-                logger.debug(r'CircuitSampler failed to transpile circuits with unbound '
-                             r'parameters. Attempting to transpile only when circuits are bound '
-                             r'now, but this can hurt performance due to repeated transpilation.')
+                logger.debug(
+                    r'CircuitSampler failed to transpile circuits with unbound '
+                    r'parameters. Attempting to transpile only when circuits are bound '
+                    r'now, but this can hurt performance due to repeated transpilation.'
+                )
                 self._transpile_before_bind = False
                 self._transpiled_circ_cache = circuits
         else:
@@ -251,26 +281,34 @@ class CircuitSamplerCustom(CircuitSampler):
                 start_time = time.time()
                 ready_circs = self._prepare_parameterized_run_config(param_bindings)
                 end_time = time.time()
-                logger.debug('Parameter conversion %.5f (ms)', (end_time - start_time) * 1000)
+                logger.debug(
+                    'Parameter conversion %.5f (ms)', (end_time - start_time) * 1000
+                )
             else:
                 start_time = time.time()
-                ready_circs = [circ.assign_parameters(CircuitSamplerCustom._filter_params(circ, binding))
-                               for circ in self._transpiled_circ_cache
-                               for binding in param_bindings]
+                ready_circs = [
+                    circ.assign_parameters(
+                        CircuitSamplerCustom._filter_params(circ, binding)
+                    )
+                    for circ in self._transpiled_circ_cache
+                    for binding in param_bindings
+                ]
                 end_time = time.time()
-                logger.debug('Parameter binding %.5f (ms)', (end_time - start_time) * 1000)
+                logger.debug(
+                    'Parameter binding %.5f (ms)', (end_time - start_time) * 1000
+                )
         else:
             ready_circs = self._transpiled_circ_cache
 
-        results = self.quantum_instance.execute(ready_circs,
-                                                had_transpiled=self._transpile_before_bind)
+        results = self.quantum_instance.execute(
+            ready_circs, had_transpiled=self._transpile_before_bind
+        )
 
         if param_bindings is not None and self._param_qobj:
             self._clean_parameterized_run_config()
 
         # Wipe parameterizations, if any
         # self.quantum_instance._run_config.parameterizations = None
-
 
         #############
         # NOTE:
@@ -288,68 +326,74 @@ class CircuitSamplerCustom(CircuitSampler):
             for j in range(reps):
                 circ_index = (i * reps) + j
 
-                #counts_dicts[circ_index] = results.get_counts(circ_index)
+                # counts_dicts[circ_index] = results.get_counts(circ_index)
                 circ_results = results.data(circ_index)
-                #statevector = results.get_statevector(circ_index)
+                # statevector = results.get_statevector(circ_index)
 
                 if 'expval_measurement' in circ_results.get('snapshots', {}).get(
-                        'expectation_value', {}):
+                    'expectation_value', {}
+                ):
 
                     if self.quantum_instance.run_config.shots != None:
                         shots = self.quantum_instance.run_config.shots
                     else:
                         shots = 8192
-                    counts_dicts.append(Statevector(results.get_statevector(circ_index)).sample_counts(shots))
-                    #print("DEBUG: From statevector (1): " + str(shots) + " shots")
+                    counts_dicts.append(
+                        Statevector(results.get_statevector(circ_index)).sample_counts(
+                            shots
+                        )
+                    )
+                    # print("DEBUG: From statevector (1): " + str(shots) + " shots")
                 elif self._statevector:
                     if self.quantum_instance.run_config.shots != None:
                         shots = self.quantum_instance.run_config.shots
                     else:
                         shots = 8192
-                    counts_dicts.append(Statevector(results.get_statevector(circ_index)).sample_counts(shots))
-                    #print("counts_dicts[circ_index]", counts_dicts[circ_index])
-                    #if self._force_shots == True:
+                    counts_dicts.append(
+                        Statevector(results.get_statevector(circ_index)).sample_counts(
+                            shots
+                        )
+                    )
+                    # print("counts_dicts[circ_index]", counts_dicts[circ_index])
+                    # if self._force_shots == True:
                     #    print("DEBUG: From statevector (2): " + str(shots) + " shots")
-                    #else:
+                    # else:
                     #    print("DEBUG: From statevector (2) - using statevector")
                 else:
                     counts_dicts.append(results.get_counts(circ_index))
-                    #print("counts_dicts[circ_index]", counts_dicts[circ_index])
+                    # print("counts_dicts[circ_index]", counts_dicts[circ_index])
                     shots = 0
                     for count in counts_dicts[circ_index].values():
                         shots += count
-                    #print("DEBUG: From counts: " + str(shots) + " shots")
-        #print("counts_dicts:", counts_dicts)
-
-
-
-
-
-
-
+                    # print("DEBUG: From counts: " + str(shots) + " shots")
+        # print("counts_dicts:", counts_dicts)
 
         #############
         ### Post process raw counts
-        ### NOTE: counts_dicts could be formatted as 
+        ### NOTE: counts_dicts could be formatted as
         ###     List[Dict[str, int]] or List[List[Dict[str, int]]]: a list of dictionaries or a list of
         ###     a list of dictionaries. A dictionary has the counts for each qubit with
         ###     the keys containing a string in binary format and separated
         ###     according to the registers in circuit (e.g. ``0100 1110``).
         ###     The string is little-endian (cr[0] on the right hand side).
-        ###     
+        ###
         ###     However the format will most likely always be List[Dict[str, int]]
-        ###     with a single register, so the state bitstring will have no spaces. 
+        ###     with a single register, so the state bitstring will have no spaces.
         #############
         counts_dicts_new = None
         if self._post_process_raw_data != None:
-            if self._force_shots == False and self._statevector and self._log_text != None:
-                self._log_text("WARNING: post_process_raw_data method cannot execute on statevector, set force_shots to True or don't use the stavevector simulator.")
+            if (
+                self._force_shots == False
+                and self._statevector
+                and self._log_text != None
+            ):
+                self._log_text(
+                    "WARNING: post_process_raw_data method cannot execute on statevector, set force_shots to True or don't use the stavevector simulator."
+                )
             counts_dicts_new = self._post_process_raw_data(counts_dicts)
         else:
             counts_dicts_new = counts_dicts
         #############
-
-
 
         sampled_statefn_dicts = {}
         for i, op_c in enumerate(circuit_sfns):
@@ -363,34 +407,51 @@ class CircuitSamplerCustom(CircuitSampler):
 
                 if self._force_shots == False:
                     if 'expval_measurement' in circ_results.get('snapshots', {}).get(
-                            'expectation_value', {}):
+                        'expectation_value', {}
+                    ):
                         snapshot_data = results.data(circ_index)['snapshots']
-                        avg = snapshot_data['expectation_value']['expval_measurement'][0]['value']
+                        avg = snapshot_data['expectation_value']['expval_measurement'][
+                            0
+                        ]['value']
                         if isinstance(avg, (list, tuple)):
                             # Aer versions before 0.4 use a list snapshot format
                             # which must be converted to a complex value.
                             avg = avg[0] + 1j * avg[1]
                         # Will be replaced with just avg when eval is called later
                         num_qubits = circuit_sfns[0].num_qubits
-                        result_sfn = DictStateFn('0' * num_qubits,
-                                                 is_measurement=op_c.is_measurement) * avg
+                        result_sfn = (
+                            DictStateFn(
+                                '0' * num_qubits, is_measurement=op_c.is_measurement
+                            )
+                            * avg
+                        )
                     elif self._statevector:
-                        result_sfn = StateFn(op_c.coeff * results.get_statevector(circ_index),
-                                             is_measurement=op_c.is_measurement)
+                        result_sfn = StateFn(
+                            op_c.coeff * results.get_statevector(circ_index),
+                            is_measurement=op_c.is_measurement,
+                        )
                     else:
                         shots = self.quantum_instance._run_config.shots
-                        result_sfn = StateFn({b: (v / shots) ** 0.5 * op_c.coeff
-                                             for (b, v) in counts_dicts_new[circ_index].items()},
-                                             is_measurement=op_c.is_measurement)
+                        result_sfn = StateFn(
+                            {
+                                b: (v / shots) ** 0.5 * op_c.coeff
+                                for (b, v) in counts_dicts_new[circ_index].items()
+                            },
+                            is_measurement=op_c.is_measurement,
+                        )
                 else:
-                    #result_sfn = ConvertCountsToStateFunction(counts_dicts_new[circ_index], shots=None, op_c=op_c)
+                    # result_sfn = ConvertCountsToStateFunction(counts_dicts_new[circ_index], shots=None, op_c=op_c)
                     shots = 0
                     for _, count in counts_dicts_new[circ_index].items():
                         shots += count
 
-                    result_sfn = StateFn({b: (v / shots) ** 0.5 * op_c.coeff
-                                          for (b, v) in counts_dicts_new[circ_index].items()},
-                                          is_measurement=op_c.is_measurement)
+                    result_sfn = StateFn(
+                        {
+                            b: (v / shots) ** 0.5 * op_c.coeff
+                            for (b, v) in counts_dicts_new[circ_index].items()
+                        },
+                        is_measurement=op_c.is_measurement,
+                    )
                     # use statefn instead of dictstatefn
                     if self._statevector:
                         result_sfn = result_sfn.to_matrix_op(massive=True)
@@ -402,14 +463,15 @@ class CircuitSamplerCustom(CircuitSampler):
         return sampled_statefn_dicts
 
 
-
-
-
-
 class QAOACustom(QAOA):
     # a function pointer that processes returned results from execution when sample_circuits is called.
     # post_process_raw_data(Result) -> Result
-    _post_process_raw_data: Optional[Callable[[Union[List[Dict[str, int]], List[List[Dict[str, int]]]]], Union[List[Dict[str, int]], List[List[Dict[str, int]]]]]] = None
+    _post_process_raw_data: Optional[
+        Callable[
+            [Union[List[Dict[str, int]], List[List[Dict[str, int]]]]],
+            Union[List[Dict[str, int]], List[List[Dict[str, int]]]],
+        ]
+    ] = None
 
     _qaoa_name = ""
     _force_shots = False
@@ -419,32 +481,34 @@ class QAOACustom(QAOA):
     _mixer = None
     _initial_state = None
     _optimiser_parameter_bounds = None
-    _parameterise_point_for_energy_evaluation: Callable[[Union[List[float], np.ndarray], int], List[float]] = None
-    
-    # After solving/optimising using a custom parameterisation, the member 'latest_parameterised_point' should 
+    _parameterise_point_for_energy_evaluation: Callable[
+        [Union[List[float], np.ndarray], int], List[float]
+    ] = None
+
+    # After solving/optimising using a custom parameterisation, the member 'latest_parameterised_point' should
     # contain the solution parameterised point returned by the optimiser.
     latest_parameterised_point = None
-    
 
-    def __init__(self,
-                 optimizer: Optimizer = None,
-                 reps: int = 1,
-                 initial_state: Optional[QuantumCircuit] = None,
-                 mixer: Union[QuantumCircuit, OperatorBase] = None,
-                 initial_point: Union[List[float], np.ndarray, None] = None,
-                 gradient: Optional[Union[GradientBase, Callable[[Union[np.ndarray, List]],
-                                                                 List]]] = None,
-                 expectation: Optional[ExpectationBase] = None,
-                 include_custom: bool = False,
-                 max_evals_grouped: int = 1,
-                 callback: Optional[Callable[[int, np.ndarray, float, float], None]] = None,
-                 quantum_instance: Optional[
-                     Union[QuantumInstance, BaseBackend, Backend]] = None,
-                 qaoa_name: str = "",
-                 force_shots: bool = False,
-                 output_circuit_when_sample: bool = False,
-                 log_text: Optional[Callable[..., Any]] = print
-                ) -> None:
+    def __init__(
+        self,
+        optimizer: Optimizer = None,
+        reps: int = 1,
+        initial_state: Optional[QuantumCircuit] = None,
+        mixer: Union[QuantumCircuit, OperatorBase] = None,
+        initial_point: Union[List[float], np.ndarray, None] = None,
+        gradient: Optional[
+            Union[GradientBase, Callable[[Union[np.ndarray, List]], List]]
+        ] = None,
+        expectation: Optional[ExpectationBase] = None,
+        include_custom: bool = False,
+        max_evals_grouped: int = 1,
+        callback: Optional[Callable[[int, np.ndarray, float, float], None]] = None,
+        quantum_instance: Optional[Union[QuantumInstance, BaseBackend, Backend]] = None,
+        qaoa_name: str = "",
+        force_shots: bool = False,
+        output_circuit_when_sample: bool = False,
+        log_text: Optional[Callable[..., Any]] = print,
+    ) -> None:
         """
         Args:
             optimizer: A classical optimizer.
@@ -503,38 +567,43 @@ class QAOACustom(QAOA):
 
         # VQE will use the operator setter, during its constructor, which is overridden below and
         # will cause the var form to be built
-        super(QAOA, self).__init__(ansatz=None,
-                                   optimizer=optimizer,
-                                   initial_point=initial_point,
-                                   gradient=gradient,
-                                   expectation=expectation,
-                                   include_custom=include_custom,
-                                   max_evals_grouped=max_evals_grouped,
-                                   callback=callback,
-                                   quantum_instance=quantum_instance)
+        super(QAOA, self).__init__(
+            ansatz=None,
+            optimizer=optimizer,
+            initial_point=initial_point,
+            gradient=gradient,
+            expectation=expectation,
+            include_custom=include_custom,
+            max_evals_grouped=max_evals_grouped,
+            callback=callback,
+            quantum_instance=quantum_instance,
+        )
 
     @VariationalAlgorithm.quantum_instance.setter
-    def quantum_instance(self,
-                         quantum_instance: Union[QuantumInstance, BaseBackend, Backend]
-                        ) -> None:
-        """ set quantum_instance. (Overides method)"""
+    def quantum_instance(
+        self, quantum_instance: Union[QuantumInstance, BaseBackend, Backend]
+    ) -> None:
+        """set quantum_instance. (Overides method)"""
         super(VQE, self.__class__).quantum_instance.__set__(self, quantum_instance)
 
         self._circuit_sampler = CircuitSamplerCustom(
-                                    self._quantum_instance,
-                                    param_qobj = is_aer_provider(self._quantum_instance.backend),
-                                    sampler_name = self._qaoa_name,
-                                    force_shots = self._force_shots,
-                                    output_circuit_when_sample = self._output_circuit_when_sample,
-                                    log_text = self._log_text)
+            self._quantum_instance,
+            param_qobj=is_aer_provider(self._quantum_instance.backend),
+            sampler_name=self._qaoa_name,
+            force_shots=self._force_shots,
+            output_circuit_when_sample=self._output_circuit_when_sample,
+            log_text=self._log_text,
+        )
         self._circuit_sampler.set_post_process_raw_data(self._post_process_raw_data)
 
-    def find_minimum(self,
-                     initial_point: Optional[np.ndarray] = None,
-                     ansatz: Optional[QuantumCircuit] = None,
-                     cost_fn: Optional[Callable] = None,
-                     optimizer: Optional[Optimizer] = None,
-                     gradient_fn: Optional[Callable] = None) -> 'VariationalResult':
+    def find_minimum(
+        self,
+        initial_point: Optional[np.ndarray] = None,
+        ansatz: Optional[QuantumCircuit] = None,
+        cost_fn: Optional[Callable] = None,
+        optimizer: Optional[Optimizer] = None,
+        gradient_fn: Optional[Callable] = None,
+    ) -> 'VariationalResult':
         """Optimize to find the minimum cost value.
 
         Args:
@@ -554,7 +623,9 @@ class QAOACustom(QAOA):
         Raises:
             ValueError: invalid input
         """
-        initial_point = initial_point if initial_point is not None else self.initial_point
+        initial_point = (
+            initial_point if initial_point is not None else self.initial_point
+        )
         ansatz = ansatz if ansatz is not None else self.ansatz
         cost_fn = cost_fn if cost_fn is not None else self._cost_fn
         optimizer = optimizer if optimizer is not None else self.optimizer
@@ -562,38 +633,51 @@ class QAOACustom(QAOA):
         if ansatz is None:
             raise ValueError('Ansatz neither supplied to constructor nor find minimum.')
         if cost_fn is None:
-            raise ValueError('Cost function neither supplied to constructor nor find minimum.')
+            raise ValueError(
+                'Cost function neither supplied to constructor nor find minimum.'
+            )
         if optimizer is None:
-            raise ValueError('Optimizer neither supplied to constructor nor find minimum.')
+            raise ValueError(
+                'Optimizer neither supplied to constructor nor find minimum.'
+            )
 
         nparms = ansatz.num_parameters
-        
+
         if self._optimiser_parameter_bounds == None:
-            if hasattr(ansatz, 'parameter_bounds') and ansatz.parameter_bounds is not None:
+            if (
+                hasattr(ansatz, 'parameter_bounds')
+                and ansatz.parameter_bounds is not None
+            ):
                 bounds = ansatz.parameter_bounds
             else:
                 bounds = [(None, None)] * len(self.initial_point)
         else:
             bounds = self._optimiser_parameter_bounds
 
-        #if initial_point is not None and len(initial_point) != nparms:
+        # if initial_point is not None and len(initial_point) != nparms:
         #    raise ValueError(
         #        'Initial point size {} and parameter size {} mismatch'.format(
         #            len(initial_point), nparms))
         if len(bounds) != len(self.initial_point):
             bounds = [(None, None)] * len(self.initial_point)
-            print("WARNING: Ansatz bounds size does not match parameter size (len(self.initial_point)), setting bounds to (None, None)")
-            #raise ValueError('Ansatz bounds size does not match parameter size (len(self.initial_point))')
+            print(
+                "WARNING: Ansatz bounds size does not match parameter size (len(self.initial_point)), setting bounds to (None, None)"
+            )
+            # raise ValueError('Ansatz bounds size does not match parameter size (len(self.initial_point))')
 
         # If *any* value is *equal* in bounds array to None then the problem does *not* have bounds
         problem_has_bounds = not np.any(np.equal(bounds, None))
         # Check capabilities of the optimizer
         if problem_has_bounds:
             if not optimizer.is_bounds_supported:
-                raise ValueError('Problem has bounds but optimizer does not support bounds')
+                raise ValueError(
+                    'Problem has bounds but optimizer does not support bounds'
+                )
         else:
             if optimizer.is_bounds_required:
-                raise ValueError('Problem does not have bounds but optimizer requires bounds')
+                raise ValueError(
+                    'Problem does not have bounds but optimizer requires bounds'
+                )
         if initial_point is not None:
             if not optimizer.is_initial_point_supported:
                 raise ValueError('Optimizer does not support initial point')
@@ -615,15 +699,21 @@ class QAOACustom(QAOA):
             if not gradient_fn:
                 gradient_fn = self._gradient
 
-        logger.info('Starting optimizer.\nbounds=%s\ninitial point=%s', bounds, initial_point)
-        opt_params, opt_val, num_optimizer_evals = optimizer.optimize(len(self.initial_point),
-                                                                          cost_fn,
-                                                                          variable_bounds=bounds,
-                                                                          initial_point=initial_point,
-                                                                          gradient_function=gradient_fn)
-                                   
+        logger.info(
+            'Starting optimizer.\nbounds=%s\ninitial point=%s', bounds, initial_point
+        )
+        opt_params, opt_val, num_optimizer_evals = optimizer.optimize(
+            len(self.initial_point),
+            cost_fn,
+            variable_bounds=bounds,
+            initial_point=initial_point,
+            gradient_function=gradient_fn,
+        )
+
         if self._parameterise_point_for_energy_evaluation != None:
-            self.latest_parameterised_point = self._parameterise_point_for_energy_evaluation(opt_params, nparms)
+            self.latest_parameterised_point = (
+                self._parameterise_point_for_energy_evaluation(opt_params, nparms)
+            )
 
         eval_time = time.time() - start
 
@@ -635,13 +725,14 @@ class QAOACustom(QAOA):
         result.optimal_parameters = dict(zip(self._ansatz_params, opt_params))
 
         return result
-    
-    def eigenvector_to_solutions(self, 
-                                  eigenvector: Union[dict, np.ndarray, StateFn],
-                                  quadratic_program: QuadraticProgram,
-                                  min_probability: float = 1e-6
-                                 ) -> List[Tuple[str, float, float]]:
-        """ Convert the eigenvector to a list of solution 3-tuples (bitstrings, quadratic_function_objective_value, probability). (Overides method)
+
+    def eigenvector_to_solutions(
+        self,
+        eigenvector: Union[dict, np.ndarray, StateFn],
+        quadratic_program: QuadraticProgram,
+        min_probability: float = 1e-6,
+    ) -> List[Tuple[str, float, float]]:
+        """Convert the eigenvector to a list of solution 3-tuples (bitstrings, quadratic_function_objective_value, probability). (Overides method)
         Args:
             eigenvector: The eigenvector from which the solution states are extracted.
             quadratic_program: The quadatic program to evaluate at the bitstring.
@@ -649,15 +740,17 @@ class QAOACustom(QAOA):
         Returns:
             A list with elements for each computational basis state contained in the eigenvector.
             Each element is a 3-tuple:
-            (state as bitstring (str), 
-             quadatic program evaluated at that bitstring (float), 
+            (state as bitstring (str),
+             quadatic program evaluated at that bitstring (float),
              probability of sampling this bitstring from the eigenvector (float)
             ).
         Raises:
             TypeError: If the type of eigenvector is not supported.
         """
         if isinstance(eigenvector, DictStateFn):
-            eigenvector = {bitstr: val ** 2 for (bitstr, val) in eigenvector.primitive.items()}
+            eigenvector = {
+                bitstr: val ** 2 for (bitstr, val) in eigenvector.primitive.items()
+            }
         elif isinstance(eigenvector, StateFn):
             eigenvector = eigenvector.to_matrix()
 
@@ -670,7 +763,9 @@ class QAOACustom(QAOA):
                 if sampling_probability > 0:
                     if sampling_probability >= min_probability:
                         # I've reversed the qubits here, I think they were the wrong order.
-                        value = quadratic_program.objective.evaluate([int(bit) for bit in bitstr[::-1]])
+                        value = quadratic_program.objective.evaluate(
+                            [int(bit) for bit in bitstr[::-1]]
+                        )
                         solutions += [(bitstr[::-1], value, sampling_probability)]
 
         elif isinstance(eigenvector, np.ndarray):
@@ -684,18 +779,22 @@ class QAOACustom(QAOA):
                 if sampling_probability > 0:
                     if sampling_probability >= min_probability:
                         bitstr = '{:b}'.format(i).rjust(num_qubits, '0')[::-1]
-                        value = quadratic_program.objective.evaluate([int(bit) for bit in bitstr])
+                        value = quadratic_program.objective.evaluate(
+                            [int(bit) for bit in bitstr]
+                        )
                         solutions += [(bitstr, value, sampling_probability)]
 
         else:
-            raise TypeError('Unsupported format of eigenvector. Provide a dict or numpy.ndarray.')
+            raise TypeError(
+                'Unsupported format of eigenvector. Provide a dict or numpy.ndarray.'
+            )
 
         return solutions
 
-    def _energy_evaluation(self,
-                           parameters: Union[List[float], np.ndarray]
-                          ) -> Union[float, List[float]]:
-        """ Evaluate energy at given parameters for the ansatz. This is the objective function 
+    def _energy_evaluation(
+        self, parameters: Union[List[float], np.ndarray]
+    ) -> Union[float, List[float]]:
+        """Evaluate energy at given parameters for the ansatz. This is the objective function
         to be passed to the optimizer that is used for evaluation. (Overides method)
         Args:
             parameters: The parameters for the ansatz.
@@ -708,7 +807,9 @@ class QAOACustom(QAOA):
 
         if self._parameterise_point_for_energy_evaluation != None:
             self.latest_parameterised_point = parameters
-            parameters = self._parameterise_point_for_energy_evaluation(parameters, num_parameters)
+            parameters = self._parameterise_point_for_energy_evaluation(
+                parameters, num_parameters
+            )
 
         if self._ansatz.num_parameters == 0:
             raise RuntimeError('The ansatz cannot have 0 parameters.')
@@ -716,12 +817,15 @@ class QAOACustom(QAOA):
         parameter_sets = np.reshape(parameters, (-1, num_parameters))
         # Create dict associating each parameter with the lists of parameterization values for it
 
-        param_bindings = dict(zip(self._ansatz_params,
-                                  parameter_sets.transpose().tolist()))  # type: Dict
+        param_bindings = dict(
+            zip(self._ansatz_params, parameter_sets.transpose().tolist())
+        )  # type: Dict
 
         start_time = time.time()
-        #self._log_text("self._expect_op:", self._expect_op)
-        sampled_expect_op = self._circuit_sampler.convert(self._expect_op, params=param_bindings)
+        # self._log_text("self._expect_op:", self._expect_op)
+        sampled_expect_op = self._circuit_sampler.convert(
+            self._expect_op, params=param_bindings
+        )
         means = np.real(sampled_expect_op.eval())
 
         if self._callback is not None:
@@ -729,38 +833,49 @@ class QAOACustom(QAOA):
             estimator_error = np.sqrt(variance / self.quantum_instance.run_config.shots)
             for i, param_set in enumerate(parameter_sets):
                 self._eval_count += 1
-                self._callback(self._eval_count, param_set, means[i], estimator_error[i])
+                self._callback(
+                    self._eval_count, param_set, means[i], estimator_error[i]
+                )
         else:
             self._eval_count += len(means)
 
         end_time = time.time()
-        logger.info('Energy evaluation returned %s - %.5f (ms), eval count: %s',
-                    means, (end_time - start_time) * 1000, self._eval_count)
+        logger.info(
+            'Energy evaluation returned %s - %.5f (ms), eval count: %s',
+            means,
+            (end_time - start_time) * 1000,
+            self._eval_count,
+        )
 
         return means if len(means) > 1 else means[0]
 
-    def _prepare_for_optisation(self,
-                               operator: OperatorBase,
-                               aux_operators: Optional[List[Optional[OperatorBase]]] = None
-                              ) -> None:
-        """ Prepares the QAOA instance to perform simulation without needing to run the optimisation loop. (New method)
+    def _prepare_for_optisation(
+        self,
+        operator: OperatorBase,
+        aux_operators: Optional[List[Optional[OperatorBase]]] = None,
+    ) -> None:
+        """Prepares the QAOA instance to perform simulation without needing to run the optimisation loop. (New method)
         Args:
             operator: The operator (usually obtained from QuadraticProgram.to_ising()).
         """
-        #super(VQE, self).compute_minimum_eigenvalue(operator, aux_operators)
+        # super(VQE, self).compute_minimum_eigenvalue(operator, aux_operators)
         if self.quantum_instance is None:
-            raise AlgorithmError("A QuantumInstance or Backend "
-                                 "must be supplied to run the quantum algorithm.")
+            raise AlgorithmError(
+                "A QuantumInstance or Backend "
+                "must be supplied to run the quantum algorithm."
+            )
 
         if operator is None:
             raise AlgorithmError("The operator was never provided.")
-        #operator = self._check_operator(operator)
+        # operator = self._check_operator(operator)
         # The following code "operator = self._check_operator(operator)" was not working correctly here since it is meant to replace the operator.
         # So instead, using below code to manually update the ansatz.
-        self.ansatz = QAOAAnsatz(operator,
-                                 self._reps,
-                                 initial_state = self._initial_state,
-                                 mixer_operator = self._mixer)
+        self.ansatz = QAOAAnsatz(
+            operator,
+            self._reps,
+            initial_state=self._initial_state,
+            mixer_operator=self._mixer,
+        )
         # We need to handle the array entries being Optional i.e. having value None
         if aux_operators:
             zero_op = I.tensorpower(operator.num_qubits) * 0.0
@@ -786,17 +901,19 @@ class QAOACustom(QAOA):
                 self._gradient = self._gradient.gradient_wrapper(
                     ~StateFn(operator) @ StateFn(self._ansatz),
                     bind_params=self._ansatz_params,
-                    backend=self._quantum_instance)
-        #if not self._expect_op:
+                    backend=self._quantum_instance,
+                )
+        # if not self._expect_op:
         self._expect_op = self.construct_expectation(self._ansatz_params, operator)
 
-    def calculate_statevector_at_point(self,
-                                       operator: OperatorBase,
-                                       point: Union[List[float], np.ndarray],
-                                       force_shots: bool = False,
-                                       sample_shots: int = 8192
-                                      ) -> Union[Dict[str, float], List[float], np.ndarray]:
-        """ Prepares for QAOA simulation and calculates the statevector for the given point. (New method)
+    def calculate_statevector_at_point(
+        self,
+        operator: OperatorBase,
+        point: Union[List[float], np.ndarray],
+        force_shots: bool = False,
+        sample_shots: int = 8192,
+    ) -> Union[Dict[str, float], List[float], np.ndarray]:
+        """Prepares for QAOA simulation and calculates the statevector for the given point. (New method)
         Args:
             operator: The operator (usually obtained from QuadraticProgram.to_ising()).
             point: The QAOA parameters (a list ordered as: [all_ZZ_gamma_values] + [all_X_beta_values]).
@@ -817,10 +934,12 @@ class QAOACustom(QAOA):
             ret = self._quantum_instance.execute(qc)
             statevector = ret.get_statevector(qc)
             if force_shots == True:
-                counts = Statevector(ret.get_statevector(qc)).sample_counts(sample_shots)
+                counts = Statevector(ret.get_statevector(qc)).sample_counts(
+                    sample_shots
+                )
                 statevector = {}
                 for state in counts.keys():
-                    statevector[state] = (counts[state]/sample_shots) ** 0.5
+                    statevector[state] = (counts[state] / sample_shots) ** 0.5
         else:
             c = ClassicalRegister(qc.width(), name='c')
             q = find_regs_by_name(qc, 'q')
@@ -833,36 +952,42 @@ class QAOACustom(QAOA):
             statevector = {b: (v / shots) ** 0.5 for (b, v) in counts.items()}
         return statevector
 
-    def execute_at_point(self, 
-                         point: Union[List[float], np.ndarray], 
-                         quadratic_program: QuadraticProgram, 
-                         optimal_function_value: float = None, 
-                         log_text: Optional[Callable[..., Any]] = print
-                        ) -> Dict[str, Any]:
-        """ Runs QAOA without the optimization loop. Evaluates a single set of qaoa parameters. (New method)
+    def execute_at_point(
+        self,
+        point: Union[List[float], np.ndarray],
+        quadratic_program: QuadraticProgram,
+        optimal_function_value: float = None,
+        log_text: Optional[Callable[..., Any]] = print,
+    ) -> Dict[str, Any]:
+        """Runs QAOA without the optimization loop. Evaluates a single set of qaoa parameters. (New method)
         Args:
             point: The QAOA parameters (a list ordered as: [all_ZZ_gamma_values] + [all_X_beta_values]).
             quadratic_program: The quadratic program to obtain the operator from and to evaluate the solution state bitstrings with.
-            optimal_function_value: The optimal value for which the solution states return in the quadratic_program. 
-                Useful in rare cases where the solutions have zero probability. 
+            optimal_function_value: The optimal value for which the solution states return in the quadratic_program.
+                Useful in rare cases where the solutions have zero probability.
                 If None, the best function_value among solutions will be used.
             log_text: Used for text output, replacement to the default print method to make logging easy.
                 If None, no text output can occur.
         Returns:
             A dict containing the results. Keys are: 'energy', 'point', 'solutions', 'solution_probability', 'eigenstate', 'function_value'.
         """
-        
+
         op_custom, offset = quadratic_program.to_ising()
 
         results_dict = {}
 
         # no need to call "self.prepare_for_optisation(op_custom)" because the
-        # methods "self.calculate_statevector_at_point(op_custom, point)" and 
+        # methods "self.calculate_statevector_at_point(op_custom, point)" and
         # "self.evaluate_energy(op_custom, point)" already do.
         eigenstate = self.calculate_statevector_at_point(op_custom, point)
         energy = self.evaluate_energy_at_point(op_custom, point)
 
-        solutions = self.get_optimal_solutions_from_statevector(eigenstate, quadratic_program, min_probability=10 ** -6, optimal_function_value=optimal_function_value)
+        solutions = self.get_optimal_solutions_from_statevector(
+            eigenstate,
+            quadratic_program,
+            min_probability=10 ** -6,
+            optimal_function_value=optimal_function_value,
+        )
 
         solution_probability = 0
         for sol in solutions:
@@ -879,10 +1004,9 @@ class QAOACustom(QAOA):
                 log_text("WARNING: No solutions were found.")
         return results_dict
 
-    def evaluate_energy_at_point(self,
-                                 operator: OperatorBase,
-                                 point: Union[List[float], np.ndarray]
-                                ) -> Union[float, List[float]]:
+    def evaluate_energy_at_point(
+        self, operator: OperatorBase, point: Union[List[float], np.ndarray]
+    ) -> Union[float, List[float]]:
         """Evaluate energy at given parameters for the operator ansatz. (New method)
         Args:
             operator: The operator (usually obtained from QuadraticProgram.to_ising()).
@@ -895,13 +1019,14 @@ class QAOACustom(QAOA):
         self._prepare_for_optisation(operator)
         return self._energy_evaluation(point)
 
-    def get_optimal_solutions_from_statevector(self,
-                                               eigenvector: Union[dict, np.ndarray, StateFn],
-                                               quadratic_program: QuadraticProgram,
-                                               min_probability: float = 1e-6,
-                                               optimal_function_value: float = None
-                                              ) -> List[Tuple[str, float, float]]:
-        """ Extract the solution state information from the eigenvector. (New method)
+    def get_optimal_solutions_from_statevector(
+        self,
+        eigenvector: Union[dict, np.ndarray, StateFn],
+        quadratic_program: QuadraticProgram,
+        min_probability: float = 1e-6,
+        optimal_function_value: float = None,
+    ) -> List[Tuple[str, float, float]]:
+        """Extract the solution state information from the eigenvector. (New method)
         Args:
             eigenvector: The eigenvector from which the solution states are extracted.
             quadratic_program: The QUBO to evaluate at the bitstring.
@@ -913,9 +1038,9 @@ class QAOACustom(QAOA):
             TypeError: If the type of eigenvector is not supported.
         """
 
-        samples = self.eigenvector_to_solutions(eigenvector,
-                                                 quadratic_program,
-                                                 min_probability)
+        samples = self.eigenvector_to_solutions(
+            eigenvector, quadratic_program, min_probability
+        )
         samples.sort(key=lambda x: quadratic_program.objective.sense.value * x[1])
         fval = samples[0][1]
         if optimal_function_value != None:
@@ -932,65 +1057,86 @@ class QAOACustom(QAOA):
         return solution_samples
 
     def reset_reps(self, reps: int) -> None:
-        """ Reset the number of reps when performing QAOA.
+        """Reset the number of reps when performing QAOA.
         Args:
             reps: The number of layers in QAOA (the 'p' value)
         """
         validate_min('reps', reps, 1)
         self._reps = reps
 
-    def set_optimiser_parameter_bounds(self, 
-                                       optimiser_parameter_bounds: Optional[List[Tuple[Optional[float], Optional[float]]]]
-                                      ) -> None:
+    def set_optimiser_parameter_bounds(
+        self,
+        optimiser_parameter_bounds: Optional[
+            List[Tuple[Optional[float], Optional[float]]]
+        ],
+    ) -> None:
         self._optimiser_parameter_bounds = optimiser_parameter_bounds
 
-    def set_parameterise_point_for_energy_evaluation(self,
-                                                     parameterise_point_for_optimisation: Callable[[Union[List[float], np.ndarray], int], List[float]]
-                                                    ) -> None:
-        self._parameterise_point_for_energy_evaluation = parameterise_point_for_optimisation
-    
-    def set_post_process_raw_data(self, 
-                                  post_process_raw_data_method: Optional[Callable[[Union[List[Dict[str, int]], List[List[Dict[str, int]]]]], Union[List[Dict[str, int]], List[List[Dict[str, int]]]] ]]
-                                 ) -> None:
-        """ Uses the specified method to process the raw sampled data executed on the backened whenever circuits are sampled.
+    def set_parameterise_point_for_energy_evaluation(
+        self,
+        parameterise_point_for_optimisation: Callable[
+            [Union[List[float], np.ndarray], int], List[float]
+        ],
+    ) -> None:
+        self._parameterise_point_for_energy_evaluation = (
+            parameterise_point_for_optimisation
+        )
+
+    def set_post_process_raw_data(
+        self,
+        post_process_raw_data_method: Optional[
+            Callable[
+                [Union[List[Dict[str, int]], List[List[Dict[str, int]]]]],
+                Union[List[Dict[str, int]], List[List[Dict[str, int]]]],
+            ]
+        ],
+    ) -> None:
+        """Uses the specified method to process the raw sampled data executed on the backened whenever circuits are sampled.
         Args:
-            post_process_raw_data_method: The method to process the data. 
+            post_process_raw_data_method: The method to process the data.
                Inputs a list f counts dicts List[Dict[str, int]] and outputs the processed list of count dicts List[Dict[str, int]].
                The data could potentially be formatted as a list of a list of dictionaries List[List[Dict[str, int]]]. However, this
                will likely not happen withouth modifying QAOA to do so.
                Each dictionary has the counts for each qubit with the keys containing a string in binary format and separated
                according to the registers in circuit (e.g. ``0100 1110``). The string is little-endian (cr[0] on the right hand side).
-               However there will likely only be a single register without modifying QAOA, so the state bitstring should have no spaces. 
+               However there will likely only be a single register without modifying QAOA, so the state bitstring should have no spaces.
         """
         self._post_process_raw_data = post_process_raw_data_method
         if self._circuit_sampler != None:
             self._circuit_sampler.set_post_process_raw_data(self._post_process_raw_data)
 
-    def solve(self, 
-              ising_hamiltonian_operator: Union[OperatorBase, nx.Graph],
-              initial_point: Union[List[float], np.ndarray],
-              bounds: Optional[List[Tuple[Optional[float], Optional[float]]]] = None
-             ) -> MinimumEigensolverResult:
+    def solve(
+        self,
+        ising_hamiltonian_operator: Union[OperatorBase, nx.Graph],
+        initial_point: Union[List[float], np.ndarray],
+        bounds: Optional[List[Tuple[Optional[float], Optional[float]]]] = None,
+    ) -> MinimumEigensolverResult:
         if isinstance(ising_hamiltonian_operator, nx.Graph):
-            couplings, local_fields = get_ising_hamiltonian_terms_from_ising_graph(ising_hamiltonian_operator)
-            quadratic_program = get_quadratic_program_from_ising_hamiltonian_terms(couplings, local_fields, 0, None, None)
+            couplings, local_fields = get_ising_hamiltonian_terms_from_ising_graph(
+                ising_hamiltonian_operator
+            )
+            quadratic_program = get_quadratic_program_from_ising_hamiltonian_terms(
+                couplings, local_fields, 0, None, None
+            )
             ising_hamiltonian_operator, _ = quadratic_program.to_ising()
-
 
         self.initial_point = initial_point
         self.set_optimiser_parameter_bounds(bounds)
         return self.compute_minimum_eigenvalue(ising_hamiltonian_operator)
 
-    def solve_from_ising_hamiltonian_terms(self,
-                                           couplings: List[Tuple[int, int, float]],
-                                           local_fields: Mapping[int, float],
-                                           constant_term: float,
-                                           initial_point: Union[List[float], np.ndarray],
-                                           bounds: Optional[List[Tuple[Optional[float], Optional[float]]]] = None
-                                          ) -> MinimumEigensolverResult:
-        quadratic_program = get_quadratic_program_from_ising_hamiltonian_terms(couplings, local_fields, constant_term, None, None)
+    def solve_from_ising_hamiltonian_terms(
+        self,
+        couplings: List[Tuple[int, int, float]],
+        local_fields: Mapping[int, float],
+        constant_term: float,
+        initial_point: Union[List[float], np.ndarray],
+        bounds: Optional[List[Tuple[Optional[float], Optional[float]]]] = None,
+    ) -> MinimumEigensolverResult:
+        quadratic_program = get_quadratic_program_from_ising_hamiltonian_terms(
+            couplings, local_fields, constant_term, None, None
+        )
         ising_hamiltonian_operator, _ = quadratic_program.to_ising()
-        
+
         self.initial_point = initial_point
         self.set_optimiser_parameter_bounds(bounds)
         return self.compute_minimum_eigenvalue(ising_hamiltonian_operator)
@@ -1000,8 +1146,11 @@ class QAOACustom(QAOA):
 ### Helper Methods
 ###############
 
-def convert_from_fourier_point(fourier_point: List[float], num_params_in_point: int) -> List[float]:
-    """ Converts a point in Fourier space back to QAOA angles.
+
+def convert_from_fourier_point(
+    fourier_point: List[float], num_params_in_point: int
+) -> List[float]:
+    """Converts a point in Fourier space back to QAOA angles.
     Args:
         fourier_point: The point in Fourier space to convert.
         num_params_in_point: The length of the resulting point. Must be even.
@@ -1009,20 +1158,27 @@ def convert_from_fourier_point(fourier_point: List[float], num_params_in_point: 
         The converted point in the form of QAOA rotation angles.
     """
     new_point = [0] * num_params_in_point
-    reps = int(num_params_in_point / 2) # num_params_in_result should always be even
-    max_frequency = int(len(fourier_point) / 2) # fourier_point should always be even
+    reps = int(num_params_in_point / 2)  # num_params_in_result should always be even
+    max_frequency = int(len(fourier_point) / 2)  # fourier_point should always be even
     for i in range(reps):
         new_point[i] = 0
         for k in range(max_frequency):
-            new_point[i] += fourier_point[k] * math.sin((k + 0.5) * (i + 0.5) * math.pi / reps)
+            new_point[i] += fourier_point[k] * math.sin(
+                (k + 0.5) * (i + 0.5) * math.pi / reps
+            )
 
         new_point[i + reps] = 0
         for k in range(max_frequency):
-            new_point[i + reps] += fourier_point[k + max_frequency] * math.cos((k + 0.5) * (i + 0.5) * math.pi / reps)
+            new_point[i + reps] += fourier_point[k + max_frequency] * math.cos(
+                (k + 0.5) * (i + 0.5) * math.pi / reps
+            )
     return new_point
 
-def convert_to_fourier_point(point: List[float], num_params_in_fourier_point: int) -> List[float]:
-    """ Converts a point to fourier space.
+
+def convert_to_fourier_point(
+    point: List[float], num_params_in_fourier_point: int
+) -> List[float]:
+    """Converts a point to fourier space.
     Args:
         point: The point to convert.
         num_params_in_fourier_point: The length of the resulting fourier point. Must be even.
@@ -1030,50 +1186,60 @@ def convert_to_fourier_point(point: List[float], num_params_in_fourier_point: in
         The converted point in fourier space.
     """
     fourier_point = [0] * num_params_in_fourier_point
-    reps = int(len(point) / 2) # point should always be even
-    max_frequency = int(num_params_in_fourier_point / 2) # num_params_in_fourier_point should always be even
+    reps = int(len(point) / 2)  # point should always be even
+    max_frequency = int(
+        num_params_in_fourier_point / 2
+    )  # num_params_in_fourier_point should always be even
     for i in range(max_frequency):
         fourier_point[i] = 0
         for k in range(reps):
-            fourier_point[i] += point[k] * math.sin((k + 0.5) * (i + 0.5) * math.pi / max_frequency)
+            fourier_point[i] += point[k] * math.sin(
+                (k + 0.5) * (i + 0.5) * math.pi / max_frequency
+            )
         fourier_point[i] = 2 * fourier_point[i] / reps
 
         fourier_point[i + max_frequency] = 0
         for k in range(reps):
-            fourier_point[i + max_frequency] += point[k + reps] * math.cos((k + 0.5) * (i + 0.5) * math.pi / max_frequency)
+            fourier_point[i + max_frequency] += point[k + reps] * math.cos(
+                (k + 0.5) * (i + 0.5) * math.pi / max_frequency
+            )
         fourier_point[i + max_frequency] = 2 * fourier_point[i + max_frequency] / reps
     return fourier_point
 
-def get_ising_graph_from_ising_hamiltonian_terms(couplings: List[Tuple[int, int, float]], 
-                                                 local_fields: Mapping[int, float]
-                                                ) -> nx.Graph:
-    """ Constructs a networkx graph with node and edge weights corresponding to the coefficients 
+
+def get_ising_graph_from_ising_hamiltonian_terms(
+    couplings: List[Tuple[int, int, float]], local_fields: Mapping[int, float]
+) -> nx.Graph:
+    """Constructs a networkx graph with node and edge weights corresponding to the coefficients
         of the local field and coupling strengths of the Ising Hamiltonian respectively.
     Args:
-        couplings: A list of couplings for the Ising graph (or Hamiltonian). 
-            Couplings are in the form of a 3-tuple e.g. 
+        couplings: A list of couplings for the Ising graph (or Hamiltonian).
+            Couplings are in the form of a 3-tuple e.g.
             (spin_1, spin_2, coupling_strength).
-        local_fields: The local field strengths for the Ising graph (or Hamiltonian) 
+        local_fields: The local field strengths for the Ising graph (or Hamiltonian)
             A Dict with keys: spin numbers and values: field strengths.
     Returns:
         The Ising graph as an instance of a networkx Graph object with node and edge weights.
     """
     G = nx.Graph()
-    for local_field in local_fields.keys():    
+    for local_field in local_fields.keys():
         G.add_node(local_field, weight=local_fields[local_field])
-        
+
     G.add_weighted_edges_from(couplings)
 
     return G
 
-def get_ising_hamiltonian_terms_from_ising_graph(ising_graph: nx.Graph) -> Tuple[List[Tuple[int, int, float]], Dict[int, float]]:
-    """ Constructs a networkx graph with node and edge weights corresponding to the coefficients 
+
+def get_ising_hamiltonian_terms_from_ising_graph(
+    ising_graph: nx.Graph,
+) -> Tuple[List[Tuple[int, int, float]], Dict[int, float]]:
+    """Constructs a networkx graph with node and edge weights corresponding to the coefficients
         of the local field and coupling strengths of the Ising Hamiltonian respectively.
     Args:
-        couplings: A list of couplings for the Ising graph (or Hamiltonian). 
-            Couplings are in the form of a 3-tuple e.g. 
+        couplings: A list of couplings for the Ising graph (or Hamiltonian).
+            Couplings are in the form of a 3-tuple e.g.
             (spin_1, spin_2, coupling_strength).
-        local_fields: The local field strengths for the Ising graph (or Hamiltonian) 
+        local_fields: The local field strengths for the Ising graph (or Hamiltonian)
             A Dict with keys: spin numbers and values: field strengths.
     Returns:
         The Ising graph as an instance of a networkx Graph object with node and edge weights.
@@ -1090,21 +1256,23 @@ def get_ising_hamiltonian_terms_from_ising_graph(ising_graph: nx.Graph) -> Tuple
 
     return couplings, local_fields
 
-def get_quadratic_program_from_ising_hamiltonian_terms(couplings: List[Tuple[int, int, float]], 
-                                                       local_fields: Mapping[int, float], 
-                                                       constant_term: float,
-                                                       output_ising_graph_filename: Optional[str] = None,
-                                                       log_text: Optional[Callable[..., Any]] = print
-                                                      ) -> QuadraticProgram:
-    """ Constructs and returns the quadratic program corresponding to the input Hamiltonian terms.
-        Applies the transformation -> Z = 2b - 1, since Ising Hamiltonian spins have {+-1} values 
+
+def get_quadratic_program_from_ising_hamiltonian_terms(
+    couplings: List[Tuple[int, int, float]],
+    local_fields: Mapping[int, float],
+    constant_term: float,
+    output_ising_graph_filename: Optional[str] = None,
+    log_text: Optional[Callable[..., Any]] = print,
+) -> QuadraticProgram:
+    """Constructs and returns the quadratic program corresponding to the input Hamiltonian terms.
+        Applies the transformation -> Z = 2b - 1, since Ising Hamiltonian spins have {+-1} values
         while the quadratic program is binary.
     Args:
-        couplings: A list of couplings for the Ising graph (or Hamiltonian). 
-            Couplings are in the form of a 3-tuple e.g. 
+        couplings: A list of couplings for the Ising graph (or Hamiltonian).
+            Couplings are in the form of a 3-tuple e.g.
             (spin_1, spin_2, coupling_strength).
             Negative coupling strengths are Ferromagnetic (spin states want to be the same).
-        local_fields: The local field strengths for the Ising graph (or Hamiltonian) 
+        local_fields: The local field strengths for the Ising graph (or Hamiltonian)
             A Dict with keys: spin numbers and values: field strengths.
             Using convention with negative sign on local fields. So a negative local field makes the spin want to be +1.
         constant_term: the constant for the Ising Hamiltonian.
@@ -1117,8 +1285,14 @@ def get_quadratic_program_from_ising_hamiltonian_terms(couplings: List[Tuple[int
     """
 
     if output_ising_graph_filename != None:
-        ising_graph = get_ising_graph_from_ising_hamiltonian_terms(couplings, local_fields)
-        output_ising_graph(ising_graph, custom_filename_no_ext = output_ising_graph_filename, log_text=log_text)
+        ising_graph = get_ising_graph_from_ising_hamiltonian_terms(
+            couplings, local_fields
+        )
+        output_ising_graph(
+            ising_graph,
+            custom_filename_no_ext=output_ising_graph_filename,
+            log_text=log_text,
+        )
 
     quadratic_program = QuadraticProgram()
     for local_field in local_fields.keys():
@@ -1129,68 +1303,90 @@ def get_quadratic_program_from_ising_hamiltonian_terms(couplings: List[Tuple[int
     for car_number in local_fields.keys():
         new_linear_terms[car_number] = 0.0
     new_quadratic_terms = {}
-    
+
     # transform constant term
     new_constant_term = constant_term
-    
+
     # transform local fields
     for car_number in local_fields.keys():
-        new_linear_terms[car_number] = 2*local_fields[car_number]
+        new_linear_terms[car_number] = 2 * local_fields[car_number]
         new_constant_term -= local_fields[car_number]
 
     # transform couplings
     for coupling in couplings:
         if ('c' + str(coupling[0]), 'c' + str(coupling[1])) in new_quadratic_terms:
-            new_quadratic_terms[('c' + str(coupling[0]), 'c' + str(coupling[1]))] += 4*coupling[2]
+            new_quadratic_terms[('c' + str(coupling[0]), 'c' + str(coupling[1]))] += (
+                4 * coupling[2]
+            )
         else:
-            new_quadratic_terms[('c' + str(coupling[0]), 'c' + str(coupling[1]))] = 4*coupling[2]
-        new_linear_terms[coupling[0]] -= 2*coupling[2]
-        new_linear_terms[coupling[1]] -= 2*coupling[2]
+            new_quadratic_terms[('c' + str(coupling[0]), 'c' + str(coupling[1]))] = (
+                4 * coupling[2]
+            )
+        new_linear_terms[coupling[0]] -= 2 * coupling[2]
+        new_linear_terms[coupling[1]] -= 2 * coupling[2]
         new_constant_term += coupling[2]
-        
-    quadratic_program.minimize(constant = new_constant_term, linear=[new_linear_terms[lf] for lf in new_linear_terms.keys()], quadratic=new_quadratic_terms)
+
+    quadratic_program.minimize(
+        constant=new_constant_term,
+        linear=[new_linear_terms[lf] for lf in new_linear_terms.keys()],
+        quadratic=new_quadratic_terms,
+    )
 
     return quadratic_program
 
-def output_ising_graph(ising_graph: nx.Graph, 
-                       custom_filename_no_ext: Optional[str] = None, 
-                       log_text: Optional[Callable[..., Any]] = print
-                      ) -> None:
-    """ Outputs the networkx graph to file in PNG format 
+
+def output_ising_graph(
+    ising_graph: nx.Graph,
+    custom_filename_no_ext: Optional[str] = None,
+    log_text: Optional[Callable[..., Any]] = print,
+) -> None:
+    """Outputs the networkx graph to file in PNG format
     Args:
         ising_graph: A networkx graph with node and edge weights specified.
             Nodes have attribute 'weight' that corresponds to a local field strength.
             Edges have attribute 'weight' corresponding to the coupling strength.
-        custom_filename_no_ext: The filename to save the figure to. 
+        custom_filename_no_ext: The filename to save the figure to.
             Defaults to "Ising_graph" if None.
         log_text: Used for text output, replacement to the default print method to make logging easy.
             If None, no text output will occur.
     """
     # Generate plot of the Graph
-    colors       = ['r' for node in ising_graph.nodes()]
+    colors = ['r' for node in ising_graph.nodes()]
     default_axes = plt.axes(frameon=False)
     default_axes.set_axis_off()
-    default_axes.margins(0.1) 
-    pos          = nx.circular_layout(ising_graph)
-    labels = {n: str(n) + ';   ' + str(ising_graph.nodes[n]['weight']) for n in ising_graph.nodes}
+    default_axes.margins(0.1)
+    pos = nx.circular_layout(ising_graph)
+    labels = {
+        n: str(n) + ';   ' + str(ising_graph.nodes[n]['weight'])
+        for n in ising_graph.nodes
+    }
 
-    nx.draw_networkx(ising_graph, node_color=colors, node_size=600, alpha=1, ax=default_axes, pos=pos, labels=labels)
+    nx.draw_networkx(
+        ising_graph,
+        node_color=colors,
+        node_size=600,
+        alpha=1,
+        ax=default_axes,
+        pos=pos,
+        labels=labels,
+    )
     edge_labels = nx.get_edge_attributes(ising_graph, 'weight')
-    nx.draw_networkx_edge_labels(ising_graph, pos=pos,edge_labels=edge_labels)
+    nx.draw_networkx_edge_labels(ising_graph, pos=pos, edge_labels=edge_labels)
     if custom_filename_no_ext == None:
         filename = "Ising_graph.png"
     else:
         filename = custom_filename_no_ext + '.png'
     if log_text != None:
         log_text("Saving Ising graph '" + filename + "'...")
-    
+
     plt.savefig(filename, format="PNG", bbox_inches=0)
     plt.close()
 
-def print_qaoa_solutions(solutions: List[Mapping[str, Any]], 
-                         log_text: Callable[..., Any] = print
-                        ) -> None:
-    """ Pretty prints (pprint) a list of solutions followed by their summed probability.
+
+def print_qaoa_solutions(
+    solutions: List[Mapping[str, Any]], log_text: Callable[..., Any] = print
+) -> None:
+    """Pretty prints (pprint) a list of solutions followed by their summed probability.
     Args:
         solutions: List of solutions, they are each formatted as a dict with (key, value):
             'state', state bitstring (str)
@@ -1199,9 +1395,18 @@ def print_qaoa_solutions(solutions: List[Mapping[str, Any]],
         log_text: Used for text output, replacement to the default print method to make logging easy.
     """
     import pprint
+
     if len(solutions) > 0:
-        log_text("function value (quadratic program):", str(solutions[0]["function_value"]))
-        solutions_string = pprint.pformat([[solutions[x]["state"], solutions[x]["probability"]] for x in range(len(solutions))], indent=2)
+        log_text(
+            "function value (quadratic program):", str(solutions[0]["function_value"])
+        )
+        solutions_string = pprint.pformat(
+            [
+                [solutions[x]["state"], solutions[x]["probability"]]
+                for x in range(len(solutions))
+            ],
+            indent=2,
+        )
         log_text(solutions_string)
         initial_solution_probability = 0
         for x in range(len(solutions)):

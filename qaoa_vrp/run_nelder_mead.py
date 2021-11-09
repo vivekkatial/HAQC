@@ -41,7 +41,7 @@ from qaoa_vrp.parallel.optimize_qaoa import run_qaoa_parallel_control_max_restar
 from qiskit import Aer
 from qiskit.aqua import aqua_globals
 from qiskit.aqua.algorithms import NumPyMinimumEigensolver
-from qiskit.algorithms.optimizers import  NELDER_MEAD
+from qiskit.algorithms.optimizers import NELDER_MEAD
 from qiskit.optimization import QuadraticProgram
 from qiskit.optimization.algorithms import MinimumEigenOptimizer
 from qiskit.optimization.applications.ising.common import sample_most_likely
@@ -52,7 +52,9 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
-def run_nelder_mead_instance(filename, max_restarts: int, p_max=10, mlflow_tracking=False):
+def run_nelder_mead_instance(
+    filename, max_restarts: int, p_max=10, mlflow_tracking=False
+):
     instance_path = "data/{}".format(filename)
     with open(instance_path) as f:
         data = json.load(f)
@@ -156,17 +158,13 @@ def run_nelder_mead_instance(filename, max_restarts: int, p_max=10, mlflow_track
     # Initiate optimizers for a parallel run
     optimizers = [
         [
-            NELDER_MEAD(
-                disp=True, 
-                adaptive=True, 
-                tol=0.1,
-                maxfev=10000
-                ),
+            NELDER_MEAD(disp=True, adaptive=True, tol=0.1, maxfev=10000),
             max_restarts,
             op,
-            p+1,
+            p + 1,
             mlflow_tracking,
-        ] for p in range(p_max)
+        ]
+        for p in range(p_max)
     ]
 
     with pp.ProcessPool() as pool:
@@ -194,13 +192,18 @@ def run_nelder_mead_instance(filename, max_restarts: int, p_max=10, mlflow_track
         results_layer_p_fn = os.path.join(temp_dir, results_layer_p_fn)
 
         # Create plots
-        g = sns.relplot(data=d_results, x="total_evals", y="value", col="layer", kind="line", col_wrap=4)
+        g = sns.relplot(
+            data=d_results,
+            x="total_evals",
+            y="value",
+            col="layer",
+            kind="line",
+            col_wrap=4,
+        )
         axes = g.axes.flatten()
         for ax in axes:
-                    ax.axhline(
-                        -180, ls='--', linewidth=3, color='grey'
-                    )
-                    ax.set_xlabel("Function Evals")
+            ax.axhline(-180, ls='--', linewidth=3, color='grey')
+            ax.set_xlabel("Function Evals")
 
         optimization_plot_fn = f"optimization_plot.png"
         optimization_plot_fn = osf.path.join(temp_dir, optimization_plot_fn)
@@ -213,11 +216,11 @@ def run_nelder_mead_instance(filename, max_restarts: int, p_max=10, mlflow_track
                 res["min_energy_state"], exact_result
             )
             feasibility_p = plot_feasibility_results(feasibility_p_res)
-            feasibility_p_fn = f"feasibility_plot_opt_{res['optimizer']}_p_{res['layers']}.png"
-            feasibility_p_fn = os.path.join(temp_dir, feasibility_p_fn)
-            feasibility_p.figure.savefig(
-                feasibility_p_fn, dpi=300, bbox_inches="tight"
+            feasibility_p_fn = (
+                f"feasibility_plot_opt_{res['optimizer']}_p_{res['layers']}.png"
             )
+            feasibility_p_fn = os.path.join(temp_dir, feasibility_p_fn)
+            feasibility_p.figure.savefig(feasibility_p_fn, dpi=300, bbox_inches="tight")
 
             # Track on MLFlow for each optimizer
             if mlflow_tracking:
