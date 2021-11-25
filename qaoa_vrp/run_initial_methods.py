@@ -162,13 +162,13 @@ def run_initialisation_methods_instance(
 
     # Adding all methods
     methods = [
-        "random_initialisation",
+        # "random_initialisation",
         "perturb_from_previous_layer",
         "ramped_up_initialisation",
-        "fourier_transform",
+        # "fourier_transform",
     ]
     optimizers = [
-        NELDER_MEAD(disp=True, adaptive=True, tol=0.1, maxfev=10000),
+        # NELDER_MEAD(disp=True, adaptive=True, tol=0.1, maxfev=10000),
         COBYLA(maxiter=1000, disp=True, rhobeg=0.1),
     ]
     results = []
