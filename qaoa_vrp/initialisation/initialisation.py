@@ -50,7 +50,7 @@ class Initialisation:
     def perturb_from_previous_layer(
         self,
         previous_layer_initial_point: List[float],
-        noise: float = 0.01,
+        noise: float = 0.1,
         p: Optional[int] = None,
     ) -> List[float]:
         """A function to perturb data from the previous layer
@@ -101,7 +101,7 @@ class Initialisation:
         self,
         p: int,
         growth: float = 0.1,
-        noise: float = 0.01,
+        noise: float = 0.1,
         previous_layer_initial_point: Optional[List[float]] = None,
     ) -> List[float]:
 
@@ -145,7 +145,7 @@ class Initialisation:
     def fourier_transform(
         self,
         previous_layer_initial_point: List[float],
-        noise: float = 0.01,
+        noise: float = 0.1,
         p: Optional[int] = None,
     ) -> List[float]:
         if p == 1:
