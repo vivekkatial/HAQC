@@ -168,8 +168,8 @@ def run_initialisation_methods_instance(
         "fourier_transform",
     ]
     optimizers = [
-        NELDER_MEAD(disp=True, adaptive=True, tol=0.1, maxfev=10000),
-        # COBYLA(maxiter=1000, disp=True, rhobeg=0.1),
+        #NELDER_MEAD(disp=True, adaptive=True, tol=0.1, maxfev=10000),
+        COBYLA(maxiter=10000, disp=True, rhobeg=1),
     ]
     results = []
 
