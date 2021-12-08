@@ -105,7 +105,7 @@ def generate_feasibility_results(eigenstate, exact_result):
     ) / 2 ** len(state)
     feasibility_results["random_feasible_guess"] = (
         feasible_count + infeasible_count
-    ) / num_feasible
+    ) / 6
 
     return feasibility_results
 
