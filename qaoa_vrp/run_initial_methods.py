@@ -162,14 +162,14 @@ def run_initialisation_methods_instance(
 
     # Adding all methods
     methods = [
-        # "random_initialisation",
+        "random_initialisation",
         "perturb_from_previous_layer",
         "ramped_up_initialisation",
-        # "fourier_transform",
+        "fourier_transform",
     ]
     optimizers = [
-        # NELDER_MEAD(disp=True, adaptive=True, tol=0.1, maxfev=10000),
-        COBYLA(maxiter=1000, disp=True, rhobeg=0.1),
+        NELDER_MEAD(disp=True, adaptive=True, tol=0.1, maxfev=10000),
+        # COBYLA(maxiter=1000, disp=True, rhobeg=0.1),
     ]
     results = []
 
@@ -196,6 +196,7 @@ def run_initialisation_methods_instance(
                 results.append(result)
 
     # Clean up results
+    # import pdb; pdb.set_trace()
     d_results = []
     for res in results:
         d_res = pd.DataFrame(
@@ -209,16 +210,16 @@ def run_initialisation_methods_instance(
     d_results = pd.concat(d_results)
 
     # Add counter for num_evals (+1 so it matches up with n_eval)
-    d_results['total_evals'] = d_results.groupby('layer').cumcount() + 1
+    d_results['total_evals'] = d_results.groupby(['init_method','layer']).cumcount() + 1
     # Clean up method
     d_results['method'] = d_results['init_method'].apply(lambda x: x.replace('_', " ").title())
     d_results.reset_index(inplace=True)
-    # Write results
-    with open(results_layer_p_fn, "w") as file:
-        d_results.to_csv(file, index=False)
     with make_temp_directory() as temp_dir:
         results_layer_p_fn = f"results_large_offset.csv"
         results_layer_p_fn = os.path.join(temp_dir, results_layer_p_fn)
+        # Write results
+        with open(results_layer_p_fn, "w") as file:
+            d_results.to_csv(file, index=False)
 
         # Create plots
         g = sns.relplot(
@@ -239,8 +240,29 @@ def run_initialisation_methods_instance(
         optimization_plot_fn = f"optimization_plot.png"
         optimization_plot_fn = os.path.join(temp_dir, optimization_plot_fn)
         g.savefig(optimization_plot_fn)
-
         plt.clf()
+
+        # Create plot for CIs
+        g_ave = sns.relplot(
+            data=d_results,
+            x="n_eval",
+            y="value",
+            row="method",
+            col="layer",
+            hue="optimizer",
+            kind="line"
+        )
+
+        axes = g_ave.axes.flatten()
+        for ax in axes:
+            ax.axhline(-180, ls='--', linewidth=3, color='grey')
+            ax.set_xlabel("Function Evals")
+
+        optimization_plot_ave_fn = f"optimization_plot_average.png"
+        optimization_plot_ave_fn = os.path.join(temp_dir, optimization_plot_ave_fn)
+        g_ave.savefig(optimization_plot_ave_fn)
+        plt.clf()
+
         for res in results:
             # Make feasibility graph
             feasibility_p_res = generate_feasibility_results(
@@ -258,6 +280,7 @@ def run_initialisation_methods_instance(
         if mlflow_tracking:
             mlflow.log_artifact(results_layer_p_fn)
             mlflow.log_artifact(optimization_plot_fn)
+            mlflow.log_artifact(optimization_plot_ave_fn)
 
     print('\rOptimization complete')
 

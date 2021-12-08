@@ -54,6 +54,7 @@ class Initialisation:
 
         Args:
             previous_layer_initial_point (List[float]): Initial optimized point from the previous layer
+            p (Optional[int]): The number of points in the initial layer
 
         Returns:
             List[float]: New initial point in the parameter space for layer p+1
@@ -62,6 +63,8 @@ class Initialisation:
             raise ValueError(
                 "Must be an even number of params for alpha and beta (2*p)"
             )
+        if p is None:
+            p = len(previous_layer_initial_point)/2
 
         if p == 1:
             return np.random.uniform(-2 * np.pi, 2 * np.pi, 2 * p)
