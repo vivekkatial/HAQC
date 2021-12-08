@@ -48,7 +48,10 @@ class Initialisation:
         return np.random.uniform(-2 * np.pi, 2 * np.pi, 2 * p)
 
     def perturb_from_previous_layer(
-        self, previous_layer_initial_point: List[float], p: Optional[int] = None
+        self,
+        previous_layer_initial_point: List[float],
+        noise: float = 0.01,
+        p: Optional[int] = None,
     ) -> List[float]:
         """A function to perturb data from the previous layer
 
@@ -64,22 +67,27 @@ class Initialisation:
                 "Must be an even number of params for alpha and beta (2*p)"
             )
         if p is None:
-            p = len(previous_layer_initial_point)/2
+            p = len(previous_layer_initial_point) / 2
 
         if p == 1:
             return np.random.uniform(-2 * np.pi, 2 * np.pi, 2 * p)
 
         # For cases when we're doing restarts use the previous layer initial point (with some perturbation)
-        if 2*p == len(previous_layer_initial_point):
-            return [x +  np.random.uniform(1e-5, -1e-5) for x in previous_layer_initial_point]
+        if 2 * p == len(previous_layer_initial_point):
+            return [
+                x + np.random.uniform(noise, -noise)
+                for x in previous_layer_initial_point
+            ]
 
         p = int(len(previous_layer_initial_point) / 2)
         alphas = previous_layer_initial_point[:p]
         betas = previous_layer_initial_point[p:]
 
         # Ramp up alpha and beta based on growth
-        perturbed_alphas = [alpha + np.random.uniform(1e-5, -1e-5) for alpha in alphas]
-        perturbed_betas = [beta + np.random.uniform(1e-5, -1e-5) for beta in betas]
+        perturbed_alphas = [
+            alpha + np.random.uniform(noise, -noise) for alpha in alphas
+        ]
+        perturbed_betas = [beta + np.random.uniform(noise, -noise) for beta in betas]
 
         # Add zeros
         perturbed_alphas.append(0.0)
@@ -93,14 +101,15 @@ class Initialisation:
         self,
         p: int,
         growth: float = 0.1,
+        noise: float = 0.01,
         previous_layer_initial_point: Optional[List[float]] = None,
     ) -> List[float]:
 
         # Handle initial p=1
         if p == 1:
             return [
-                growth + np.random.uniform(1e-5, -1e-5),
-                p * growth + np.random.uniform(1e-5, -1e-5),
+                growth + np.random.uniform(noise, -noise),
+                p * growth + np.random.uniform(noise, -noise),
             ]
 
         # Initialise arrays
@@ -121,11 +130,11 @@ class Initialisation:
 
         # Ramp up alpha and beta based on growth
         ramped_alphas = [
-            alpha_init + i * growth + np.random.uniform(1e-5, -1e-5)
+            alpha_init + i * growth + np.random.uniform(noise, -noise)
             for i, _ in enumerate(alphas)
         ]
         ramped_betas = [
-            beta_init - i * growth + np.random.uniform(1e-5, -1e-5)
+            beta_init - i * growth + np.random.uniform(noise, -noise)
             for i, _ in enumerate(betas)
         ]
 
@@ -134,13 +143,19 @@ class Initialisation:
         return ramped_params
 
     def fourier_transform(
-        self, previous_layer_initial_point: List[float], p: Optional[int] = None
+        self,
+        previous_layer_initial_point: List[float],
+        noise: float = 0.01,
+        p: Optional[int] = None,
     ) -> List[float]:
         if p == 1:
             return np.random.uniform(-2 * np.pi, 2 * np.pi, 2 * p)
         # For cases when we're doing restarts use the previous layer initial point (with some perturbation)
-        if 2*p == len(previous_layer_initial_point):
-            return [x +  np.random.uniform(1e-5, -1e-5) for x in previous_layer_initial_point]
+        if 2 * p == len(previous_layer_initial_point):
+            return [
+                x + np.random.uniform(noise, -noise)
+                for x in previous_layer_initial_point
+            ]
         # Initalise point in fourier space
         fourier_point = convert_to_fourier_point(
             previous_layer_initial_point,

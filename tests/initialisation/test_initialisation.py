@@ -6,6 +6,7 @@ from unittest.case import expectedFailure
 from qaoa_vrp.initialisation.initialisation import Initialisation
 from PIL.Image import init
 
+
 @patch('numpy.random.uniform', return_value=0.1)
 class TestRampedUpInitialPoint(unittest.TestCase):
     def test_ramped_up_initial_point_for_p_is_greater_than_one(self, mock_uniform):
@@ -15,7 +16,9 @@ class TestRampedUpInitialPoint(unittest.TestCase):
         actual = Initialisation().ramped_up_initialisation(p=p, growth=0.1)
         # Expect to see alpha_i = growth*i + \error
         # Expect to see beta_i = growth*(p - i) + \error
-        expected = np.array([0.1+0.1, 0.2+0.1, 0.3+0.1, 0.3+0.1, 0.2+0.1, 0.1+0.1])
+        expected = np.array(
+            [0.1 + 0.1, 0.2 + 0.1, 0.3 + 0.1, 0.3 + 0.1, 0.2 + 0.1, 0.1 + 0.1]
+        )
         np.testing.assert_allclose(expected, actual)
 
     def test_ramped_up_initial_point_for_p_is_equal_to_one(self, mock_uniform):
@@ -26,8 +29,7 @@ class TestRampedUpInitialPoint(unittest.TestCase):
         # Expect to see alpha_i = growth*i + \error
         # Expect to see beta_i = growth*(p - i) + \error
         expected = np.array([0.2, 0.2])
-        np.testing.assert_allclose(expected, actual)        
-
+        np.testing.assert_allclose(expected, actual)
 
 
 class TestPerturbFromPreviousLayer(unittest.TestCase):
@@ -43,6 +45,7 @@ class TestPerturbFromPreviousLayer(unittest.TestCase):
         )
         # Check that they are some what close
         np.testing.assert_allclose(expected, actual)
+
     @patch('numpy.random.uniform', return_value=[0.1, 0.1])
     def test_perturb_from_previous_layer_initial_point_for_p_equals_one_and_p_is_specified(
         self, mock_uniform
@@ -72,5 +75,7 @@ class TestFourierTransform(unittest.TestCase):
         initial_point = [0.2, 0.3]
         p = 1
         # Check that they are some what close
-        fourier_point = Initialisation().fourier_transform(previous_layer_initial_point=initial_point, p=2)
+        fourier_point = Initialisation().fourier_transform(
+            previous_layer_initial_point=initial_point, p=2
+        )
         assert len(fourier_point) == (len(initial_point) + 2)

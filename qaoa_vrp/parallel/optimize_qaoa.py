@@ -107,11 +107,10 @@ def run_qaoa_parallel_control_max_restarts(args):
         plt.axhline(y=-180, ls="--", color="grey")
         plt.title(f"Init Method: {InitialPoint.pprint_method()}")
 
-
         with make_temp_directory() as temp_dir:
             # Build and store on MLFLow
             layer_opt_fn = f"optimization_plot_layer_{p}_method_{InitialPoint.initialisation_method}.png"
-            layer_opt_fn  = os.path.join(temp_dir, layer_opt_fn )
+            layer_opt_fn = os.path.join(temp_dir, layer_opt_fn)
             g.savefig(layer_opt_fn)
             mlflow.log_artifact(layer_opt_fn)
 
