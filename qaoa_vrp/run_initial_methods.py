@@ -210,9 +210,13 @@ def run_initialisation_methods_instance(
     d_results = pd.concat(d_results)
 
     # Add counter for num_evals (+1 so it matches up with n_eval)
-    d_results['total_evals'] = d_results.groupby(['init_method','layer']).cumcount() + 1
+    d_results['total_evals'] = (
+        d_results.groupby(['init_method', 'layer']).cumcount() + 1
+    )
     # Clean up method
-    d_results['method'] = d_results['init_method'].apply(lambda x: x.replace('_', " ").title())
+    d_results['method'] = d_results['init_method'].apply(
+        lambda x: x.replace('_', " ").title()
+    )
     d_results.reset_index(inplace=True)
     with make_temp_directory() as temp_dir:
         results_layer_p_fn = f"results_large_offset.csv"
@@ -229,7 +233,7 @@ def run_initialisation_methods_instance(
             row="method",
             col="layer",
             hue="optimizer",
-            kind="line"
+            kind="line",
         )
 
         axes = g.axes.flatten()
@@ -250,7 +254,7 @@ def run_initialisation_methods_instance(
             row="method",
             col="layer",
             hue="optimizer",
-            kind="line"
+            kind="line",
         )
 
         axes = g_ave.axes.flatten()
