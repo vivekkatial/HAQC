@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=8
 
 # set your minimum acceptable walltime=hours:minutes:seconds
-#SBATCH -t 02-23:59:59
+#SBATCH -t 07-23:59:59
 
 # Specify your email address to be notified of progress.
 ### SBATCH --mail-user=vkatial@student.unimelb.edu.au
