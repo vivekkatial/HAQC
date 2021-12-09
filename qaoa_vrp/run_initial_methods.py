@@ -162,7 +162,7 @@ def run_initialisation_methods_instance(
 
     # Adding all methods
     methods = [
-#        "random_initialisation",
+        "random_initialisation",
         "perturb_from_previous_layer",
         "ramped_up_initialisation",
         "fourier_transform",
