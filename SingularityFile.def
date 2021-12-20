@@ -98,7 +98,7 @@ From: python:3.9.2
   # Run experiment
   # python qaoa_vrp/run_nelder_mead.py -f $instance -m 5 -p 10 -T True
   # python qaoa_vrp/run_initial_methods.py -f $instance -m 5 -p 10 -T True
-  python qaoa_vrp/run_initial_methods.py -f $instance -m 5 -p 15 -E 5.0 -T True
+  python qaoa_vrp/run_initial_methods.py -f $instance -m 5 -p 15 -E 10.0 -T True
 
 
 ####################################################
