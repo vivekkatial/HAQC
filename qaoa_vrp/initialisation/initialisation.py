@@ -12,14 +12,18 @@ class Initialisation:
     """Initialisation Class for the method for initialisations"""
 
     def __init__(
-        self, p: int = None, initial_point: List[float] = [None], method: str = None
+        self,
+        p: int = None,
+        initial_point: List[float] = [None],
+        method: str = None,
+        evolution_time: float = 5.0,
     ) -> None:
         self.p = p
         self.initial_point = initial_point
         self.initialisation_method = method
-
         # Computed attributes
         self.previous_layer_point = None
+        self.evolution_time = evolution_time
 
     def __str__(self) -> str:
         return f"Initialisation Method: {self.initialisation_method}\nLayer: \t {self.p}\nInitial Point: \t{self.initial_point}"
@@ -167,3 +171,56 @@ class Initialisation:
             num_params_in_point=(len(previous_layer_initial_point) + 2),
         )
         return new_initial_parameters
+
+    def trotterized_quantum_annealing(
+        self,
+        p: int,
+        noise: float = 0.1,
+        evolution_time: float = 5.0,
+        previous_layer_initial_point: Optional[List[float]] = None,
+    ) -> List[float]:
+        """Implementing Trotterized Quantum Anealing based on https://arxiv.org/pdf/2101.05742.pdf
+        results.
+
+        Args:
+            p (int): Number of layers in QAOA circuit
+            noise (float): Noise applied to initial point when doing a restart. Defaults to 0.1.
+            evolution_time (float): Evolution Time. Defaults to 5.
+            previous_layer_initial_point (Optional[List[float]], optional): Previous point when doing a random restart. Defaults to None.
+
+        Returns:
+            List[float]: Initial point which has been initialised based on TQA
+        """
+
+        # Handle initial p=1
+        if p == 1:
+            return [
+                self.evolution_time + np.random.uniform(noise, -noise),
+                np.random.uniform(noise, -noise),
+            ]
+
+        # For cases when we're doing restarts use the previous layer initial point (with some perturbation)
+        if previous_layer_initial_point is not None and 2 * p == len(
+            previous_layer_initial_point
+        ):
+            return [
+                x + np.random.uniform(noise, -noise)
+                for x in previous_layer_initial_point
+            ]
+
+        # Initialise delta_t based on T and p
+        dt = self.evolution_time / p
+
+        # Initialise alphas
+        alpha_0 = 1 / p * dt
+        alpha_N = dt
+        alphas = np.linspace(start=alpha_0, stop=alpha_N, num=p)
+
+        # Initialise betas
+        beta_0 = (1 - 1 / p) * dt
+        beta_N = 0
+        betas = np.linspace(start=beta_0, stop=beta_N, num=p)
+        # Combine and add
+        tqa_params = [alphas, betas]
+        tqa_params = np.concatenate(tqa_params)
+        return tqa_params

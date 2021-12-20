@@ -54,11 +54,11 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
 def run_initialisation_methods_instance(
-    filename,
+    filename: str,
     max_restarts: int,
-    p_max=10,
-    mlflow_tracking=False,
-    init_technique="random_initialisation",
+    evolution_time: float,
+    p_max: int,
+    mlflow_tracking: bool,
 ):
     instance_path = "data/{}".format(filename)
     with open(instance_path) as f:
@@ -162,14 +162,15 @@ def run_initialisation_methods_instance(
 
     # Adding all methods
     methods = [
-        "random_initialisation",
-        "perturb_from_previous_layer",
-        "ramped_up_initialisation",
-        "fourier_transform",
+        # "random_initialisation",
+        # "perturb_from_previous_layer",
+        # "ramped_up_initialisation",
+        # "fourier_transform",
+        "trotterized_quantum_annealing",
     ]
     optimizers = [
-        #NELDER_MEAD(disp=True, adaptive=True, tol=0.1, maxfev=10000),
-        COBYLA(maxiter=10000, disp=True, rhobeg=1),
+        # NELDER_MEAD(disp=True, adaptive=True, tol=0.1, maxfev=10000),
+        COBYLA(maxiter=10, disp=True, rhobeg=1),
     ]
     results = []
 
@@ -179,7 +180,7 @@ def run_initialisation_methods_instance(
             # Initiate optimizers for a parallel run
             p = 1
             # Randomly initialise layer alpha, beta at layer 1
-            initial_point = Initialisation().random_initialisation(p=p)
+            initial_point = Initialisation(evolution_time=evolution_time).random_initialisation(p=p)
             while p <= p_max:
                 run_args = [
                     opt,
@@ -196,7 +197,6 @@ def run_initialisation_methods_instance(
                 results.append(result)
 
     # Clean up results
-    # import pdb; pdb.set_trace()
     d_results = []
     for res in results:
         d_res = pd.DataFrame(
@@ -317,6 +317,14 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "-E",
+        "--evolution_time",
+        type=float,
+        default=5.0,
+        help="Evolution Time for when using Trotterized Quantum Annealing",
+    )
+
+    parser.add_argument(
         "-T",
         "--track_mlflow",
         type=str2bool,
@@ -332,6 +340,7 @@ if __name__ == "__main__":
         args["filename"],
         max_restarts=args["max_restarts"],
         p_max=args["p_max"],
+        evolution_time=args["evolution_time"],
         mlflow_tracking=args["track_mlflow"],
     )
     t2 = time.time()
