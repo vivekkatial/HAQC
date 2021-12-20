@@ -79,3 +79,18 @@ class TestFourierTransform(unittest.TestCase):
             previous_layer_initial_point=initial_point, p=2
         )
         assert len(fourier_point) == (len(initial_point) + 2)
+
+
+@patch('numpy.random.uniform', return_value=0.1)
+class TestTQA(unittest.TestCase):
+    def test_tqa_initialisation_for_when_p_greater_than_one(self, mock_uniform):
+        p = 5
+        actual = Initialisation(evolution_time=5).trotterized_quantum_annealing(p=p)
+        expected = np.array([0.2, 0.4, 0.6, 0.8, 1, 0.8, 0.6, 0.4, 0.2, 0.0])
+        np.testing.assert_allclose(expected, actual)
+
+    def test_tqa_initialisation_for_when_p_equals_one(self, mock_uniform):
+        p = 1
+        actual = Initialisation(evolution_time=5).trotterized_quantum_annealing(p=p, evolution_time=5)
+        expected = np.array([5.1, 0.1])
+        np.testing.assert_allclose(expected, actual)
