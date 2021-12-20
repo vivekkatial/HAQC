@@ -162,11 +162,11 @@ def run_initialisation_methods_instance(
 
     # Adding all methods
     methods = [
+        "trotterized_quantum_annealing",
         "random_initialisation",
         "perturb_from_previous_layer",
         "ramped_up_initialisation",
         "fourier_transform",
-        "trotterized_quantum_annealing",
     ]
     optimizers = [
         # NELDER_MEAD(disp=True, adaptive=True, tol=0.1, maxfev=10000),
