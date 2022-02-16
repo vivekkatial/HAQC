@@ -58,16 +58,8 @@ from qaoa_vrp.parallel.optimize_qaoa import run_qaoa_parallel_control_max_restar
 plt.style.use("seaborn")
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-
-# In[2]:
-
-
 filename = "instanceType_asymmetric_tsp_numNodes_4_numVehicles_1_0083a1d22a6447f69091ac552ceb8ee2.json"
-instance_path = "../../data/{}".format(filename)
-
-
-# In[3]:
-
+instance_path = "data/{}".format(filename)
 
 with open(instance_path) as f:
     data = json.load(f)
@@ -75,10 +67,6 @@ with open(instance_path) as f:
     num_vehicles = int(data["numVehicles"])
     threshold = float(data["threshold"])
     n_max = int(data["n_max"])
-
-
-# In[4]:
-
 
 edge_mat = nx.linalg.graphmatrix.adjacency_matrix(G).toarray()
 cost_mat = np.array(nx.attr_matrix(G, edge_attr="cost", rc_order=list(G.nodes())))
