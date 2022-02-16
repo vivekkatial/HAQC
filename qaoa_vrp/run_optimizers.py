@@ -2,7 +2,7 @@
 from logging import FATAL
 import warnings
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 # Standard Libraries
 import argparse
@@ -84,7 +84,7 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
     edge_mat = nx.linalg.graphmatrix.adjacency_matrix(G).toarray()
     cost_mat = np.array(nx.attr_matrix(G, edge_attr="cost", rc_order=list(G.nodes())))
     for edge in G.edges():
-        G[edge[0]][edge[1]]['cost'] = 0
+        G[edge[0]][edge[1]]["cost"] = 0
 
     edge_mat = nx.linalg.graphmatrix.adjacency_matrix(G).toarray()
     cost_mat = np.array(nx.attr_matrix(G, edge_attr="cost", rc_order=list(G.nodes())))
@@ -118,8 +118,8 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
 
     op, offset = qubo.to_ising()
 
-    print('Offset:', offset)
-    print('Ising Hamiltonian:')
+    print("Offset:", offset)
+    print("Ising Hamiltonian:")
     print(op.print_details())
 
     qp = QuadraticProgram()
@@ -133,15 +133,15 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
     ee = NumPyMinimumEigensolver(op)
     exact_result = ee.run()
 
-    print('energy:', exact_result.eigenvalue.real)
+    print("energy:", exact_result.eigenvalue.real)
     if mlflow_tracking:
         mlflow.log_metric("ground_state_energy", exact_result.eigenvalue.real)
-    print('tsp objective:', exact_result.eigenvalue.real + offset)
+    print("tsp objective:", exact_result.eigenvalue.real + offset)
     x = sample_most_likely(exact_result.eigenstate)
-    print('feasible:', tsp.tsp_feasible(x))
+    print("feasible:", tsp.tsp_feasible(x))
     z = tsp.get_tsp_solution(x)
-    print('solution:', z)
-    print('solution objective:', tsp.tsp_value(z, cost_mat))
+    print("solution:", z)
+    print("solution objective:", tsp.tsp_value(z, cost_mat))
 
     if mlflow_tracking:
         mlflow.log_metric("ground_state_energy", exact_result.eigenvalue.real)
@@ -170,14 +170,14 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
         converge_vals = np.empty([len(optimizers)], dtype=object)
         min_energy_vals = np.empty([len(optimizers)], dtype=object)
         min_energy_states = np.empty([len(optimizers)], dtype=object)
-        backend = Aer.get_backend('aer_simulator_matrix_product_state')
+        backend = Aer.get_backend("aer_simulator_matrix_product_state")
         # mps_algo = "mps_apply_measure"
         # mps_algo = "mps_probabilities"
         print(f"Setting MPS Sample Measure Algorithim to be: {mps_algo}")
         backend.set_option("mps_sample_measure_algorithm", mps_algo)
 
         for i, optimizer in enumerate(optimizers):
-            print('\rOptimizer: {}        '.format(type(optimizer).__name__))
+            print("\rOptimizer: {}        ".format(type(optimizer).__name__))
             counts = []
             values = []
             # Run energy and results
@@ -261,7 +261,7 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
         d_results = pd.DataFrame.from_records(d_results)
 
         # Add counter for num_evals
-        d_results['total_evals'] = d_results.groupby('optimizer').cumcount()
+        d_results["total_evals"] = d_results.groupby("optimizer").cumcount()
 
         with make_temp_directory() as temp_dir:
             results_layer_p_fn = f"results_large_offset_p_{p}.csv"
@@ -311,7 +311,7 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
         # Increment p
         p += 1
 
-    print('\rOptimization complete')
+    print("\rOptimization complete")
 
 
 if __name__ == "__main__":

@@ -29,7 +29,7 @@ def distance(i, j):
         dy = j[1] - i[1]
         return math.sqrt(dx * dx + dy * dy)
     else:
-        raise TypeError('Incorrect Type - Please feed a tuple of coordinates')
+        raise TypeError("Incorrect Type - Please feed a tuple of coordinates")
 
 
 def read_instance(filename):

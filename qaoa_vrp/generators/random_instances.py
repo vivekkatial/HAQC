@@ -172,11 +172,11 @@ def generate_euclidean_graph(num_nodes: int) -> nx.classes.graph.Graph:
     G = nx.Graph()
 
     # Build nodes
-    nodes = [(i, {'pos': tuple(np.random.random(2))}) for i in V]
+    nodes = [(i, {"pos": tuple(np.random.random(2))}) for i in V]
     G.add_nodes_from(nodes)
 
     # Get positions
-    pos = nx.get_node_attributes(G, 'pos')
+    pos = nx.get_node_attributes(G, "pos")
 
     # Add edges to the graph
     for i in V:
@@ -222,13 +222,13 @@ def generate_euclidean_graph_with_outliers(
         # Move node
         x_move_direction = get_direction()
         y_move_direction = get_direction()
-        x_new = G.nodes()[node]['pos'][0] + x_move_direction * gamma * np.sqrt(2)
-        y_new = G.nodes()[node]['pos'][1] + y_move_direction * gamma * np.sqrt(2)
-        G.nodes()[node]['pos'] = (x_new, y_new)
-        G.nodes()[node]['tag'] = "outlier"
+        x_new = G.nodes()[node]["pos"][0] + x_move_direction * gamma * np.sqrt(2)
+        y_new = G.nodes()[node]["pos"][1] + y_move_direction * gamma * np.sqrt(2)
+        G.nodes()[node]["pos"] = (x_new, y_new)
+        G.nodes()[node]["tag"] = "outlier"
 
     # Get new position data
-    pos = nx.get_node_attributes(G, 'pos')
+    pos = nx.get_node_attributes(G, "pos")
 
     V = range(num_nodes)
     # Recalculate edge distances
@@ -256,7 +256,7 @@ def generate_asymmetric_euclidean_graph(
 
     # Generate random euclidean graph
     G = generate_euclidean_graph(num_nodes)
-    adj = nx.adjacency_matrix(G, weight='cost')
+    adj = nx.adjacency_matrix(G, weight="cost")
 
     # Randomly generate an adjacency matrix with random costs for each edge
     rand = np.random.rand(len(G), len(G))

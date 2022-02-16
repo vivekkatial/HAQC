@@ -66,7 +66,7 @@ def generate_feasibility_results(eigenstate, exact_result):
 
     num_feasible = len([x for x in eigenstate.keys() if tsp.tsp_feasible(x)])
     x = sample_most_likely(exact_result.eigenstate)
-    exact_sol_state = ''.join([str(i) for i in x])
+    exact_sol_state = "".join([str(i) for i in x])
     for state in eigenstate.keys():
         # Confirm feasible count
         if (
@@ -124,7 +124,7 @@ def plot_feasibility_results(feasibility_results):
     sns.set_color_codes("muted")
     feasible_plot = sns.barplot(x=keys, y=vals)
     feasible_plot.set_xticklabels(
-        feasible_plot.get_xticklabels(), rotation=90, horizontalalignment='right'
+        feasible_plot.get_xticklabels(), rotation=90, horizontalalignment="right"
     )
 
     return feasible_plot

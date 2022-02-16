@@ -34,11 +34,11 @@ class ForestTSPSolverNaive(object):
         driver_operators = self.create_driver_operators()
 
         minimizer_kwargs = {
-            'method': 'Nelder-Mead',
-            'options': {'ftol': self.ftol, 'xtol': self.xtol, 'disp': False},
+            "method": "Nelder-Mead",
+            "options": {"ftol": self.ftol, "xtol": self.xtol, "disp": False},
         }
 
-        vqe_option = {'disp': print_fun, 'return_all': True, 'samples': None}
+        vqe_option = {"disp": print_fun, "return_all": True, "samples": None}
 
         qubits = list(range(self.number_of_qubits))
 
@@ -122,7 +122,7 @@ class ForestTSPSolverNaive(object):
         cost_operators = []
         number_of_nodes = len(self.distance_matrix)
         for i in range(number_of_nodes):
-            range_of_qubits = list(range(i, number_of_nodes ** 2, number_of_nodes))
+            range_of_qubits = list(range(i, number_of_nodes**2, number_of_nodes))
             cost_operators += self.create_penalty_operators_for_qubit_range(
                 range_of_qubits
             )

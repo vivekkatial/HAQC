@@ -20,7 +20,7 @@ def run_qaoa_parallel_sv(args):
         args[3],
         args[4],
     )
-    print('\r Running Optimizer: {} in parallel'.format(type(optimizer).__name__))
+    print("\r Running Optimizer: {} in parallel".format(type(optimizer).__name__))
     backend = Aer.get_backend("statevector_simulator")
     counts = []
     values = []
@@ -78,7 +78,7 @@ def run_qaoa_parallel_sv(args):
         min_energy_state = run_results[min_energy_ind]
 
     print(
-        '\r Ending run for  Optimizer: {} in parallel'.format(type(optimizer).__name__)
+        "\r Ending run for  Optimizer: {} in parallel".format(type(optimizer).__name__)
     )
     results = {
         "optimizer": type(optimizer).__name__,
@@ -101,9 +101,9 @@ def run_qaoa_parallel_control_max_restarts_sv(args):
         args[4],
     )
     print(
-        f'\r Running Optimizer: {type(optimizer).__name__} in parallel with {p} layers and {max_restarts} restarts'
+        f"\r Running Optimizer: {type(optimizer).__name__} in parallel with {p} layers and {max_restarts} restarts"
     )
-    backend = Aer.get_backend('aer_simulator_statevector')
+    backend = Aer.get_backend("aer_simulator_statevector")
     counts = []
     values = []
     # Run energy and results
@@ -178,7 +178,7 @@ def run_qaoa_parallel_control_max_restarts_sv(args):
             mlflow.log_artifact(layer_opt_fn)
 
     print(
-        '\r Ending run for  Optimizer: {} in parallel'.format(type(optimizer).__name__)
+        "\r Ending run for  Optimizer: {} in parallel".format(type(optimizer).__name__)
     )
     results = {
         "optimizer": type(optimizer).__name__,

@@ -142,8 +142,8 @@ class SimulatedAnnealer(object):
         Plot the fitness through iterations
         """
         plt.plot([i for i in range(len(self.fitness_list))], self.fitness_list)
-        plt.ylabel('Fitness')
-        plt.xlabel('Iteration')
+        plt.ylabel("Fitness")
+        plt.xlabel("Iteration")
         plt.show()
 
     def get_best_solution(self):
@@ -175,5 +175,5 @@ def main():
     print(solution)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

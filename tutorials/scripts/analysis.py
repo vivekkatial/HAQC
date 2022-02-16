@@ -9,7 +9,7 @@ import time
 
 
 def analyze_singe_QAOA_run(distance_matrix, steps, tol, filename):
-    results_file = open(filename, 'a')
+    results_file = open(filename, "a")
     if os.stat(filename).st_size == 0:
         results_file.write(
             "steps,tol,time,valid_prob,best_prob,best_valid,best_cost,optimal_cost\n"
@@ -98,5 +98,5 @@ def main():
         analyze_singe_QAOA_run(distance_matrix, steps, tol, filename)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
