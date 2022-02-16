@@ -92,5 +92,3 @@ In your notebook, Kernel -> Change Kernel. Your kernel should now be an option.
 
 ## Authors
 - Vivek Katial
-- Floyd Creevey
-- Jedwin Villareal Villanueva

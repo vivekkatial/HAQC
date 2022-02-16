@@ -71,7 +71,7 @@ def run_qaoa_parallel_control_max_restarts(args):
             operator=op,
             optimizer=optimizer,
             callback=store_intermediate_result,
-            p=p,
+            reps=p,
             initial_point=InitialPoint.initial_point,
             quantum_instance=quantum_instance,
         )
