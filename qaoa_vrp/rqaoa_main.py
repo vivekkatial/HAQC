@@ -57,6 +57,9 @@ from qaoa_vrp.features.tsp_features import get_tsp_features
 from qaoa_vrp.parallel.optimize_qaoa import run_qaoa_parallel_control_max_restarts
 from qaoa_vrp.solutions.solutions import FEASIBLE_SOLUTIONS
 
+import argparse
+import json
+
 
 parser = argparse.ArgumentParser()
 
