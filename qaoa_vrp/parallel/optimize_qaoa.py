@@ -25,9 +25,9 @@ def run_qaoa_parallel_control_max_restarts(args):
         args[5],
     )
     print(
-        f'\r Running Optimizer: {type(optimizer).__name__} in parallel with {p} layers and {max_restarts} restarts'
+        f"\r Running Optimizer: {type(optimizer).__name__} in parallel with {p} layers and {max_restarts} restarts"
     )
-    backend = Aer.get_backend('aer_simulator_matrix_product_state')
+    backend = Aer.get_backend("aer_simulator_matrix_product_state")
     counts = []
     values = []
     # Run energy and results
@@ -67,11 +67,12 @@ def run_qaoa_parallel_control_max_restarts(args):
             backend, seed_simulator=seed, seed_transpiler=seed
         )
         # Initate QAOA
+        import pdb; pdb.set_trace()
         qaoa = QAOA(
             operator=op,
             optimizer=optimizer,
             callback=store_intermediate_result,
-            p=p,
+            reps=p,
             initial_point=InitialPoint.initial_point,
             quantum_instance=quantum_instance,
         )
@@ -115,7 +116,7 @@ def run_qaoa_parallel_control_max_restarts(args):
             mlflow.log_artifact(layer_opt_fn)
 
     print(
-        '\r Ending run for  Optimizer: {} in parallel, init:\t{}'.format(
+        "\r Ending run for  Optimizer: {} in parallel, init:\t{}".format(
             type(optimizer).__name__, InitialPoint.initialisation_method
         )
     )

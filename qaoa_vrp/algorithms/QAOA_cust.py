@@ -151,7 +151,7 @@ class CircuitSamplerCustom(CircuitSampler):
         statevector: Optional[bool] = None,
         param_qobj: bool = False,
         attach_results: bool = False,
-        caching: str = 'last',
+        caching: str = "last",
         sampler_name: str = "",
         force_shots: bool = False,
         output_circuit_when_sample: bool = False,
@@ -236,7 +236,7 @@ class CircuitSamplerCustom(CircuitSampler):
             OpflowError: if extracted circuits are empty.
         """
         if not circuit_sfns and not self._transpiled_circ_cache:
-            raise OpflowError('CircuitStateFn is empty and there is no cache.')
+            raise OpflowError("CircuitStateFn is empty and there is no cache.")
 
         #############
         # NOTE:
@@ -258,7 +258,7 @@ class CircuitSamplerCustom(CircuitSampler):
                     filename += "-" + str(int(1000 * value))
                 if self._log_text != None:
                     self._log_text("Saving circuit '" + filename + "'...")
-                fig = circuit_drawer(circuits[0], filename=filename, output='mpl')
+                fig = circuit_drawer(circuits[0], filename=filename, output="mpl")
                 plt.close(fig)
             #######
 
@@ -266,9 +266,9 @@ class CircuitSamplerCustom(CircuitSampler):
                 self._transpiled_circ_cache = self.quantum_instance.transpile(circuits)
             except QiskitError:
                 logger.debug(
-                    r'CircuitSampler failed to transpile circuits with unbound '
-                    r'parameters. Attempting to transpile only when circuits are bound '
-                    r'now, but this can hurt performance due to repeated transpilation.'
+                    r"CircuitSampler failed to transpile circuits with unbound "
+                    r"parameters. Attempting to transpile only when circuits are bound "
+                    r"now, but this can hurt performance due to repeated transpilation."
                 )
                 self._transpile_before_bind = False
                 self._transpiled_circ_cache = circuits
@@ -282,7 +282,7 @@ class CircuitSamplerCustom(CircuitSampler):
                 ready_circs = self._prepare_parameterized_run_config(param_bindings)
                 end_time = time.time()
                 logger.debug(
-                    'Parameter conversion %.5f (ms)', (end_time - start_time) * 1000
+                    "Parameter conversion %.5f (ms)", (end_time - start_time) * 1000
                 )
             else:
                 start_time = time.time()
@@ -295,7 +295,7 @@ class CircuitSamplerCustom(CircuitSampler):
                 ]
                 end_time = time.time()
                 logger.debug(
-                    'Parameter binding %.5f (ms)', (end_time - start_time) * 1000
+                    "Parameter binding %.5f (ms)", (end_time - start_time) * 1000
                 )
         else:
             ready_circs = self._transpiled_circ_cache
@@ -330,8 +330,8 @@ class CircuitSamplerCustom(CircuitSampler):
                 circ_results = results.data(circ_index)
                 # statevector = results.get_statevector(circ_index)
 
-                if 'expval_measurement' in circ_results.get('snapshots', {}).get(
-                    'expectation_value', {}
+                if "expval_measurement" in circ_results.get("snapshots", {}).get(
+                    "expectation_value", {}
                 ):
 
                     if self.quantum_instance.run_config.shots != None:
@@ -406,13 +406,13 @@ class CircuitSamplerCustom(CircuitSampler):
                 circ_results = results.data(circ_index)
 
                 if self._force_shots == False:
-                    if 'expval_measurement' in circ_results.get('snapshots', {}).get(
-                        'expectation_value', {}
+                    if "expval_measurement" in circ_results.get("snapshots", {}).get(
+                        "expectation_value", {}
                     ):
-                        snapshot_data = results.data(circ_index)['snapshots']
-                        avg = snapshot_data['expectation_value']['expval_measurement'][
+                        snapshot_data = results.data(circ_index)["snapshots"]
+                        avg = snapshot_data["expectation_value"]["expval_measurement"][
                             0
-                        ]['value']
+                        ]["value"]
                         if isinstance(avg, (list, tuple)):
                             # Aer versions before 0.4 use a list snapshot format
                             # which must be converted to a complex value.
@@ -421,7 +421,7 @@ class CircuitSamplerCustom(CircuitSampler):
                         num_qubits = circuit_sfns[0].num_qubits
                         result_sfn = (
                             DictStateFn(
-                                '0' * num_qubits, is_measurement=op_c.is_measurement
+                                "0" * num_qubits, is_measurement=op_c.is_measurement
                             )
                             * avg
                         )
@@ -555,7 +555,7 @@ class QAOACustom(QAOA):
             log_text: Used for text output, replacement to the default print method to make logging easy.
                 If None, no text output can occur.
         """
-        validate_min('reps', reps, 1)
+        validate_min("reps", reps, 1)
 
         self._qaoa_name = qaoa_name
         self._reps = reps
@@ -603,7 +603,7 @@ class QAOACustom(QAOA):
         cost_fn: Optional[Callable] = None,
         optimizer: Optional[Optimizer] = None,
         gradient_fn: Optional[Callable] = None,
-    ) -> 'VariationalResult':
+    ) -> "VariationalResult":
         """Optimize to find the minimum cost value.
 
         Args:
@@ -631,21 +631,21 @@ class QAOACustom(QAOA):
         optimizer = optimizer if optimizer is not None else self.optimizer
 
         if ansatz is None:
-            raise ValueError('Ansatz neither supplied to constructor nor find minimum.')
+            raise ValueError("Ansatz neither supplied to constructor nor find minimum.")
         if cost_fn is None:
             raise ValueError(
-                'Cost function neither supplied to constructor nor find minimum.'
+                "Cost function neither supplied to constructor nor find minimum."
             )
         if optimizer is None:
             raise ValueError(
-                'Optimizer neither supplied to constructor nor find minimum.'
+                "Optimizer neither supplied to constructor nor find minimum."
             )
 
         nparms = ansatz.num_parameters
 
         if self._optimiser_parameter_bounds == None:
             if (
-                hasattr(ansatz, 'parameter_bounds')
+                hasattr(ansatz, "parameter_bounds")
                 and ansatz.parameter_bounds is not None
             ):
                 bounds = ansatz.parameter_bounds
@@ -671,19 +671,19 @@ class QAOACustom(QAOA):
         if problem_has_bounds:
             if not optimizer.is_bounds_supported:
                 raise ValueError(
-                    'Problem has bounds but optimizer does not support bounds'
+                    "Problem has bounds but optimizer does not support bounds"
                 )
         else:
             if optimizer.is_bounds_required:
                 raise ValueError(
-                    'Problem does not have bounds but optimizer requires bounds'
+                    "Problem does not have bounds but optimizer requires bounds"
                 )
         if initial_point is not None:
             if not optimizer.is_initial_point_supported:
-                raise ValueError('Optimizer does not support initial point')
+                raise ValueError("Optimizer does not support initial point")
         else:
             if optimizer.is_initial_point_required:
-                if hasattr(ansatz, 'preferred_init_points'):
+                if hasattr(ansatz, "preferred_init_points"):
                     # Note: default implementation returns None, hence check again after below
                     initial_point = ansatz.preferred_init_points
 
@@ -700,7 +700,7 @@ class QAOACustom(QAOA):
                 gradient_fn = self._gradient
 
         logger.info(
-            'Starting optimizer.\nbounds=%s\ninitial point=%s', bounds, initial_point
+            "Starting optimizer.\nbounds=%s\ninitial point=%s", bounds, initial_point
         )
         opt_params, opt_val, num_optimizer_evals = optimizer.optimize(
             len(self.initial_point),
@@ -749,7 +749,7 @@ class QAOACustom(QAOA):
         """
         if isinstance(eigenvector, DictStateFn):
             eigenvector = {
-                bitstr: val ** 2 for (bitstr, val) in eigenvector.primitive.items()
+                bitstr: val**2 for (bitstr, val) in eigenvector.primitive.items()
             }
         elif isinstance(eigenvector, StateFn):
             eigenvector = eigenvector.to_matrix()
@@ -778,7 +778,7 @@ class QAOACustom(QAOA):
                 # add the i-th state if the sampling probability exceeds the threshold
                 if sampling_probability > 0:
                     if sampling_probability >= min_probability:
-                        bitstr = '{:b}'.format(i).rjust(num_qubits, '0')[::-1]
+                        bitstr = "{:b}".format(i).rjust(num_qubits, "0")[::-1]
                         value = quadratic_program.objective.evaluate(
                             [int(bit) for bit in bitstr]
                         )
@@ -786,7 +786,7 @@ class QAOACustom(QAOA):
 
         else:
             raise TypeError(
-                'Unsupported format of eigenvector. Provide a dict or numpy.ndarray.'
+                "Unsupported format of eigenvector. Provide a dict or numpy.ndarray."
             )
 
         return solutions
@@ -812,7 +812,7 @@ class QAOACustom(QAOA):
             )
 
         if self._ansatz.num_parameters == 0:
-            raise RuntimeError('The ansatz cannot have 0 parameters.')
+            raise RuntimeError("The ansatz cannot have 0 parameters.")
 
         parameter_sets = np.reshape(parameters, (-1, num_parameters))
         # Create dict associating each parameter with the lists of parameterization values for it
@@ -841,7 +841,7 @@ class QAOACustom(QAOA):
 
         end_time = time.time()
         logger.info(
-            'Energy evaluation returned %s - %.5f (ms), eval count: %s',
+            "Energy evaluation returned %s - %.5f (ms), eval count: %s",
             means,
             (end_time - start_time) * 1000,
             self._eval_count,
@@ -941,8 +941,8 @@ class QAOACustom(QAOA):
                 for state in counts.keys():
                     statevector[state] = (counts[state] / sample_shots) ** 0.5
         else:
-            c = ClassicalRegister(qc.width(), name='c')
-            q = find_regs_by_name(qc, 'q')
+            c = ClassicalRegister(qc.width(), name="c")
+            q = find_regs_by_name(qc, "q")
             qc.add_register(c)
             qc.barrier(q)
             qc.measure(q, c)
@@ -985,7 +985,7 @@ class QAOACustom(QAOA):
         solutions = self.get_optimal_solutions_from_statevector(
             eigenstate,
             quadratic_program,
-            min_probability=10 ** -6,
+            min_probability=10**-6,
             optimal_function_value=optimal_function_value,
         )
 
@@ -1061,7 +1061,7 @@ class QAOACustom(QAOA):
         Args:
             reps: The number of layers in QAOA (the 'p' value)
         """
-        validate_min('reps', reps, 1)
+        validate_min("reps", reps, 1)
         self._reps = reps
 
     def set_optimiser_parameter_bounds(
@@ -1246,13 +1246,13 @@ def get_ising_hamiltonian_terms_from_ising_graph(
     """
     local_fields = {}
     for i in range(len(ising_graph.nodes)):
-        local_fields[i] = ising_graph.nodes[i]['weight']
+        local_fields[i] = ising_graph.nodes[i]["weight"]
 
     couplings = []
 
     edge_data = ising_graph.edges(data=True)
     for edge in edge_data:
-        couplings.append((edge[0], edge[1], edge[3]['weight']))
+        couplings.append((edge[0], edge[1], edge[3]["weight"]))
 
     return couplings, local_fields
 
@@ -1296,7 +1296,7 @@ def get_quadratic_program_from_ising_hamiltonian_terms(
 
     quadratic_program = QuadraticProgram()
     for local_field in local_fields.keys():
-        quadratic_program.binary_var('c' + str(local_field))
+        quadratic_program.binary_var("c" + str(local_field))
 
     new_constant_term = 0
     new_linear_terms = {}
@@ -1314,12 +1314,12 @@ def get_quadratic_program_from_ising_hamiltonian_terms(
 
     # transform couplings
     for coupling in couplings:
-        if ('c' + str(coupling[0]), 'c' + str(coupling[1])) in new_quadratic_terms:
-            new_quadratic_terms[('c' + str(coupling[0]), 'c' + str(coupling[1]))] += (
+        if ("c" + str(coupling[0]), "c" + str(coupling[1])) in new_quadratic_terms:
+            new_quadratic_terms[("c" + str(coupling[0]), "c" + str(coupling[1]))] += (
                 4 * coupling[2]
             )
         else:
-            new_quadratic_terms[('c' + str(coupling[0]), 'c' + str(coupling[1]))] = (
+            new_quadratic_terms[("c" + str(coupling[0]), "c" + str(coupling[1]))] = (
                 4 * coupling[2]
             )
         new_linear_terms[coupling[0]] -= 2 * coupling[2]
@@ -1351,13 +1351,13 @@ def output_ising_graph(
             If None, no text output will occur.
     """
     # Generate plot of the Graph
-    colors = ['r' for node in ising_graph.nodes()]
+    colors = ["r" for node in ising_graph.nodes()]
     default_axes = plt.axes(frameon=False)
     default_axes.set_axis_off()
     default_axes.margins(0.1)
     pos = nx.circular_layout(ising_graph)
     labels = {
-        n: str(n) + ';   ' + str(ising_graph.nodes[n]['weight'])
+        n: str(n) + ";   " + str(ising_graph.nodes[n]["weight"])
         for n in ising_graph.nodes
     }
 
@@ -1370,12 +1370,12 @@ def output_ising_graph(
         pos=pos,
         labels=labels,
     )
-    edge_labels = nx.get_edge_attributes(ising_graph, 'weight')
+    edge_labels = nx.get_edge_attributes(ising_graph, "weight")
     nx.draw_networkx_edge_labels(ising_graph, pos=pos, edge_labels=edge_labels)
     if custom_filename_no_ext == None:
         filename = "Ising_graph.png"
     else:
-        filename = custom_filename_no_ext + '.png'
+        filename = custom_filename_no_ext + ".png"
     if log_text != None:
         log_text("Saving Ising graph '" + filename + "'...")
 

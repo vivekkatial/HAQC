@@ -15,13 +15,14 @@ jupyter-console = "==6.0.0"
 protobuf = "*"
 mlflow = "*"
 pytest = "*"
-qaoa-vrp = {path = ".", editable = true}
 seaborn = "*"
 pylatexenc = "*"
-qiskit = "*"
+qiskit = "0.21.2"
 boto3 = "*"
 pathos = "*"
-qiskit-optimization = "*"
+qiskit-optimization = "0.4.0"
+ipywidgets = "*"
+qaoa_vrp = {editable = true, path = "."}
 
 [requires]
 python_version = "3.9"

@@ -28,27 +28,27 @@ def draw_euclidean_graph(
     plt.figure()
 
     # Get positions
-    pos = nx.get_node_attributes(G, 'pos')
+    pos = nx.get_node_attributes(G, "pos")
 
     # If you want to add edgelabels
     for edge in G.edges():
         # Create a new attribute in the edge
-        G[edge[0]][edge[1]]['cost_label'] = np.round(G[edge[0]][edge[1]]['cost'], 2)
+        G[edge[0]][edge[1]]["cost_label"] = np.round(G[edge[0]][edge[1]]["cost"], 2)
 
-    cost_labels = nx.get_edge_attributes(G, 'cost_label')
+    cost_labels = nx.get_edge_attributes(G, "cost_label")
 
     if node_color:
         color_map = []
         for node in G:
             if node == 0:
-                color_map.append('yellow')
-            elif 'tag' in G.nodes()[node]:
+                color_map.append("yellow")
+            elif "tag" in G.nodes()[node]:
                 if G.nodes()[node]["tag"] == "outlier":
-                    color_map.append('green')
+                    color_map.append("green")
                 else:
-                    color_map.append('skyblue')
+                    color_map.append("skyblue")
             else:
-                color_map.append('skyblue')
+                color_map.append("skyblue")
     else:
         color_map = "skyblue"
 
@@ -56,15 +56,15 @@ def draw_euclidean_graph(
     if draw_edge and draw_sol:
         path = greedy_tsp(G)
         for e in G.edges():
-            G[e[0]][e[1]]['color'] = 'grey'
-            G[e[0]][e[1]]['width'] = width
+            G[e[0]][e[1]]["color"] = "grey"
+            G[e[0]][e[1]]["width"] = width
         # Set color of edges of the shortest path to green
         for i in range(len(path) - 1):
-            G[int(path[i])][int(path[i + 1])]['color'] = 'red'
-            G[int(path[i])][int(path[i + 1])]['width'] = 2 * width
+            G[int(path[i])][int(path[i + 1])]["color"] = "red"
+            G[int(path[i])][int(path[i + 1])]["width"] = 2 * width
         # Store in a list to use for drawing
-        edge_color_list = [G[e[0]][e[1]]['color'] for e in G.edges()]
-        edge_width_list = [G[e[0]][e[1]]['width'] for e in G.edges()]
+        edge_color_list = [G[e[0]][e[1]]["color"] for e in G.edges()]
+        edge_width_list = [G[e[0]][e[1]]["width"] for e in G.edges()]
 
         # Draw into the netowrkx
         nx.draw_networkx(

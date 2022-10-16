@@ -2,7 +2,7 @@
 from logging import FATAL
 import warnings
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 # Standard Libraries
 import argparse
@@ -19,7 +19,7 @@ import seaborn as sns
 import pandas as pd
 import pathos.pools as pp
 
-plt.style.use('seaborn')
+plt.style.use("seaborn")
 
 # Custom Libraries
 import qaoa_vrp.build_graph
@@ -90,7 +90,7 @@ def run_nelder_mead_instance(
     edge_mat = nx.linalg.graphmatrix.adjacency_matrix(G).toarray()
     cost_mat = np.array(nx.attr_matrix(G, edge_attr="cost", rc_order=list(G.nodes())))
     for edge in G.edges():
-        G[edge[0]][edge[1]]['cost'] = 0
+        G[edge[0]][edge[1]]["cost"] = 0
 
     edge_mat = nx.linalg.graphmatrix.adjacency_matrix(G).toarray()
     cost_mat = np.array(nx.attr_matrix(G, edge_attr="cost", rc_order=list(G.nodes())))
@@ -124,8 +124,8 @@ def run_nelder_mead_instance(
 
     op, offset = qubo.to_ising()
 
-    print('Offset:', offset)
-    print('Ising Hamiltonian:')
+    print("Offset:", offset)
+    print("Ising Hamiltonian:")
     print(op.print_details())
 
     qp = QuadraticProgram()
@@ -139,15 +139,15 @@ def run_nelder_mead_instance(
     ee = NumPyMinimumEigensolver(op)
     exact_result = ee.run()
 
-    print('energy:', exact_result.eigenvalue.real)
+    print("energy:", exact_result.eigenvalue.real)
     if mlflow_tracking:
         mlflow.log_metric("ground_state_energy", exact_result.eigenvalue.real)
-    print('tsp objective:', exact_result.eigenvalue.real + offset)
+    print("tsp objective:", exact_result.eigenvalue.real + offset)
     x = sample_most_likely(exact_result.eigenstate)
-    print('feasible:', tsp.tsp_feasible(x))
+    print("feasible:", tsp.tsp_feasible(x))
     z = tsp.get_tsp_solution(x)
-    print('solution:', z)
-    print('solution objective:', tsp.tsp_value(z, cost_mat))
+    print("solution:", z)
+    print("solution objective:", tsp.tsp_value(z, cost_mat))
 
     if mlflow_tracking:
         mlflow.log_metric("ground_state_energy", exact_result.eigenvalue.real)
@@ -176,8 +176,8 @@ def run_nelder_mead_instance(
     d_results = []
     for res in results:
         d_res = pd.DataFrame(
-            list(zip(res['converge_cnts'], res['converge_vals'])),
-            columns=['n_eval', 'value'],
+            list(zip(res["converge_cnts"], res["converge_vals"])),
+            columns=["n_eval", "value"],
         )
         d_res["optimizer"] = res["optimizer"]
         d_res["layer"] = res["layers"]
@@ -185,7 +185,7 @@ def run_nelder_mead_instance(
     d_results = pd.concat(d_results)
 
     # Add counter for num_evals (+1 so it matches up with n_eval)
-    d_results['total_evals'] = d_results.groupby('layer').cumcount() + 1
+    d_results["total_evals"] = d_results.groupby("layer").cumcount() + 1
 
     with make_temp_directory() as temp_dir:
         results_layer_p_fn = f"results_large_offset.csv"
@@ -202,7 +202,7 @@ def run_nelder_mead_instance(
         )
         axes = g.axes.flatten()
         for ax in axes:
-            ax.axhline(-180, ls='--', linewidth=3, color='grey')
+            ax.axhline(-180, ls="--", linewidth=3, color="grey")
             ax.set_xlabel("Function Evals")
 
         optimization_plot_fn = f"optimization_plot.png"
@@ -234,7 +234,7 @@ def run_nelder_mead_instance(
             mlflow.log_artifact(results_layer_p_fn)
             mlflow.log_artifact(optimization_plot_fn)
 
-    print('\rOptimization complete')
+    print("\rOptimization complete")
 
 
 if __name__ == "__main__":

@@ -198,7 +198,7 @@ def run_vrp_instance(filename, backend, mlflow_tracking, raw_build=True):
             for index, node in enumerate(cluster_mapping)
             if node == i + 1 or node == 0
         ]
-        num_nodes = len(single_qubo_solution_data['cluster'])
+        num_nodes = len(single_qubo_solution_data["cluster"])
         single_qubo_solution_data["evolution"] = solve_qaoa(
             i, qubo, p_max, n_max, backend, num_nodes
         )

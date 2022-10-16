@@ -35,7 +35,7 @@ class Initialisation:
             str: Print out of method
         """
         method_str = self.initialisation_method
-        print(method_str.replace('_', " ").title())
+        print(method_str.replace("_", " ").title())
         return 0
 
     def random_initialisation(
