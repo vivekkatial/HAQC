@@ -64,12 +64,12 @@ import json
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-        "-p",
-        "--num_layers",
-        type=int,
-        default=2,
-        help="The number of layers,p, to compute for",
-    )
+    "-p",
+    "--num_layers",
+    type=int,
+    default=2,
+    help="The number of layers,p, to compute for",
+)
 
 args = vars(parser.parse_args())
 
@@ -77,7 +77,7 @@ args = vars(parser.parse_args())
 ########## DEFINE GLOBAL VARIABLES
 # SET GLOBAL VARIABLES
 NUM_LAYERS = args["num_layers"]
-INITIAL_POINT = Initialisation().trotterized_quantum_annealing(p = NUM_LAYERS)
+INITIAL_POINT = Initialisation().trotterized_quantum_annealing(p=NUM_LAYERS)
 
 RQAOA_MIN_NUM_VARS = 3
 RQAOA_N_RESTARTS = 15
@@ -206,19 +206,26 @@ print(f"{'='*20} STARTING Recursive QAOA {'='*20}")
 
 rqaoa_sols = []
 for restart in range(RQAOA_N_RESTARTS):
-    rqaoa = RecursiveMinimumEigenOptimizer(qaoa, min_num_vars=RQAOA_MIN_NUM_VARS, min_num_vars_optimizer=exact)
+    rqaoa = RecursiveMinimumEigenOptimizer(
+        qaoa, min_num_vars=RQAOA_MIN_NUM_VARS, min_num_vars_optimizer=exact
+    )
     rqaoa_result = rqaoa.solve(qp)
     print(rqaoa_result)
     rqaoa_sols.append(rqaoa_result.x)
 
 rqaoa_res = []
 for rqaoa_sol in rqaoa_sols:
-    check = any(all(np.array_equal(x,y) for x,y  in zip(sol, rqaoa_sol)) for sol in FEASIBLE_SOLUTIONS)
+    check = any(
+        all(np.array_equal(x, y) for x, y in zip(sol, rqaoa_sol))
+        for sol in FEASIBLE_SOLUTIONS
+    )
     rqaoa_res.append(check)
 
-rqaoa_prob = sum(rqaoa_res)/len(rqaoa_res)
+rqaoa_prob = sum(rqaoa_res) / len(rqaoa_res)
 print(f"{'='*20} ALL RUNS FINISHED {'='*20}")
 
-print(f"Run with following properties: \n NUM_LAYERS \t{NUM_LAYERS}\n RQAOA_N_RESTARTS \t{RQAOA_N_RESTARTS} \n Initialisaton \t 'TQA'")
+print(
+    f"Run with following properties: \n NUM_LAYERS \t{NUM_LAYERS}\n RQAOA_N_RESTARTS \t{RQAOA_N_RESTARTS} \n Initialisaton \t 'TQA'"
+)
 print(f"QAOA Probability of Success is {np.sum(qaoa_feas_probs)}")
 print(f"Recursive QAOA Probability of Success is {rqaoa_prob}")

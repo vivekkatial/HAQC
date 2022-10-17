@@ -67,7 +67,9 @@ def run_qaoa_parallel_control_max_restarts(args):
             backend, seed_simulator=seed, seed_transpiler=seed
         )
         # Initate QAOA
-        import pdb; pdb.set_trace()
+        import pdb
+
+        pdb.set_trace()
         qaoa = QAOA(
             operator=op,
             optimizer=optimizer,

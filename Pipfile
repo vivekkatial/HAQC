@@ -23,6 +23,7 @@ pathos = "*"
 qiskit-optimization = "0.4.0"
 ipywidgets = "*"
 qaoa_vrp = {editable = true, path = "."}
+black = "*"
 
 [requires]
 python_version = "3.9"
