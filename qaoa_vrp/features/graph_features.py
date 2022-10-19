@@ -22,7 +22,7 @@ def get_graph_features(G):
     features["acyclic"] = nx.is_directed_acyclic_graph(G)
     features[
         "algebraic_connectivity"
-    ] = nx.linalg.algebraicconnectivity.algebraic_connectivity(G)
+    ] = nx.linalg.algebraicconnectivity.algebraic_connectivity(G, method="lanczos")
     features["average_distance"] = nx.average_shortest_path_length(G)
     features["bipartite"] = nx.is_bipartite(G)
 

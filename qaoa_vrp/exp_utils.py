@@ -8,7 +8,11 @@ import argparse
 import contextlib
 import tempfile
 import shutil
+import re
 
+def to_snake_case(string):
+    string = re.sub(r'(?<=[a-z])(?=[A-Z])|[^a-zA-Z]', ' ', string).strip().replace(' ', '_')
+    return ''.join(string.lower())
 
 def str2bool(v):
     """Function to convert argument into ArgParse to be boolean
