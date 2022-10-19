@@ -3,9 +3,6 @@ import numpy as np
 
 def compute_quantum_burden(qubos):
 
-    # import pdb
-    # pdb.set_trace()
-
     evolutions = [qubo["evolution"] for qubo in qubos]
     # print(evolutions)
     zipped = list(zip(*evolutions))
