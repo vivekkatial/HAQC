@@ -100,6 +100,18 @@ From: python:3.9.2
   python qaoa_vrp/run_initial_methods.py -f $instance -m 5 -p 10 -T -E 7.5 -T True
   # python qaoa_vrp/run_initial_methods.py -f $instance -m 5 -p 15 -E 1.0 -T True
 
+####################################################
+# APP TO BUILD EXPERIMENTS
+####################################################
+%apphelp build_instances
+  This is the help for building our instances.
+
+%applabels build_instances
+  APP_NAME BUILD_INSTANCES
+
+%apprun build_instances
+  # Run experiment
+  python maxcut_vqe.py -T True
 
 ####################################################
 # APP TO BUILD EXPERIMENTS
