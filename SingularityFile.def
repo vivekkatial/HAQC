@@ -103,11 +103,11 @@ From: python:3.9.2
 ####################################################
 # APP TO BUILD EXPERIMENTS
 ####################################################
-%apphelp build_instances
-  This is the help for building our instances.
+%apphelp run_vqe_maxcut
+  This is the help running MAXCUT instances on VQE
 
-%applabels build_instances
-  APP_NAME BUILD_INSTANCES
+%applabels run_vqe_maxcut
+  APP_NAME VQE_MAXCUT
 
 %apprun build_instances
   # Run experiment
