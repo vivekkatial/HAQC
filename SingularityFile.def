@@ -110,7 +110,7 @@ From: python:3.9.2
 %applabels run_vqe_maxcut
   APP_NAME VQE_MAXCUT
 
-%apprun build_instances
+%apprun run_vqe_maxcut
   # Run experiment
   python maxcut_vqe.py -T True
 
