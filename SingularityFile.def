@@ -22,6 +22,7 @@ From: python:3.9.2
     export LANG=en_US.UTF-8
     # Export env vars
     export EXPERIMENT_NAME \
+      MLFLOW_TRACKING_URI \
       MLFLOW_S3_ENDPOINT_URL \
       MLFLOW_PYTHON_BIN \
       MLFLOW_BIN \
