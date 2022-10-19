@@ -9,7 +9,8 @@ From: python:3.9.2
     export PATH=/usr/games:$PATH
 
     # Declare experiment environment variables
-    EXPERIMENT_NAME=qaoa-tsp
+    EXPERIMENT_NAME=vqe_maxcut
+    MLFLOW_TRACKING_URI=http://45.113.234.250:5000/
     # Declare mlflow environment variables
     MLFLOW_S3_ENDPOINT_URL=https://objects.storage.unimelb.edu.au
     MLFLOW_PYTHON_BIN=/usr/local/bin/python
