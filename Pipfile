@@ -22,7 +22,6 @@ boto3 = "*"
 pathos = "*"
 qiskit-optimization = "0.4.0"
 ipywidgets = "*"
-qaoa_vrp = {editable = true, path = "."}
 black = "*"
 
 [requires]
