@@ -53,7 +53,7 @@ From: python:3.9.2
   pip install --upgrade pip
   git clone https://github.com/vivekkatial/HAQC.git
   cd HAQC
-  pip install pipenv && pipenv install --dev --system --deploy
+  pip install pipenv && pipenv install --dev --system --deploy --skip-lock
 
   ####################################################
   # AWS Installation
