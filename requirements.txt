@@ -30,6 +30,7 @@ greenlet==1.1.3.post0
 gunicorn==20.1.0
 idna==3.4
 importlib-metadata==4.13.0
+importlib-resources==5.10.0
 iniconfig==1.1.1
 ipykernel==6.16.0
 ipython==8.4.0
@@ -38,9 +39,9 @@ itsdangerous==2.1.2
 jedi==0.18.1
 Jinja2==3.1.2
 jmespath==1.0.1
+jupyter-client==7.4.2
 jupyter-console==6.0.0
 jupyter-core==4.11.1
-jupyter_client==7.4.2
 jupyterlab-widgets==3.0.3
 kiwisolver==1.4.4
 Mako==1.2.3
@@ -89,6 +90,7 @@ python-louvain==0.16
 pytz==2022.4
 PyYAML==6.0
 pyzmq==24.0.1
+-e git+git@github.com:vivekkatial/HAQC.git@e6439b3e4e5438738eca2401b717acebc286af6a#egg=qaoa_vrp
 qiskit==0.39.0
 qiskit-aer==0.11.0
 qiskit-ibmq-provider==0.19.2
@@ -115,7 +117,7 @@ tomli==2.0.1
 tornado==6.2
 traitlets==5.4.0
 tweedledum==1.1.1
-typing_extensions==4.4.0
+typing-extensions==4.4.0
 urllib3==1.26.12
 wcwidth==0.2.5
 websocket-client==1.4.1
