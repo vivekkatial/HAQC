@@ -131,4 +131,5 @@ data/*
 .vscode/
 **.DS_Store
 .aws/*
-.aws
+.awshaqc/*
+haqc
