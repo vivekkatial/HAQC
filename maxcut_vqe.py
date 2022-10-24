@@ -61,6 +61,8 @@ class GraphInstance:
         self.graph_type = graph_type
         self.weight_matrix = None
         self.brute_force_sol = None
+        self.removed_edges = None
+        self.added_edges = None
 
     def __repr__(self):
         return f"This is a {self.graph_type} {self.G} graph instance"
@@ -84,6 +86,62 @@ class GraphInstance:
     def show_weight_matrix(self):
         print(self.weight_matrix)
 
+    def nearly_complete(self):
+        """An algorithm to make graph "nearly bipartite". Generate a p ~ unif (0,1).
+
+        Based on p <= 0.33, 0.33 < p <= 0.66 and p > 0.66 decide whether or not to add, remove or pause the graph construction
+
+        Raises:
+            TypeError: Only works for `graph_type` is "Nearly Complete BiPartite"
+        """
+        if self.graph_type != "Nearly Complete BiPartite":
+            raise TypeError("Inapproriate graph type")
+        else:
+            keep = False
+            # Identify bipartite structure
+            bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(self.G)
+            # Sample a top and bottom node
+            bottom_nodes = list(bottom_nodes)
+            top_nodes = list(top_nodes)
+            while keep == False:
+                # generate p
+                prob = random.random()
+                # If p <= 0.33 - we remove an edge between the partitions
+                if prob <= 1 / 3:
+                    u = random.sample(bottom_nodes, 1)[0]
+                    v = random.sample(top_nodes, 1)[0]
+                    removed_edge = (u,v)
+                    self.removed_edges.append(removed_edge)
+
+                    # Check first if edge has been removed or not
+                    if removed_edge not in self.removed_edges:
+                        print(f"Removing edge ({u},{v})")
+                        # Remove an edge
+                        self.G.remove_edge(u, v)
+                    else:
+                        print("Regenerating p")
+
+                # If 0.33 < p <= 0.66 we add an edge between a single partition
+                elif prob > 1 / 3 and prob <= 2 / 3:
+                    partition = random.randint(0, 1)
+                    # Handle for cases when partitions might be only size 1
+                    if len(bottom_nodes) < 2:
+                        partition = 1
+                    elif len(top_nodes) < 2:
+                        partition = 0
+
+                    if partition == 0:
+                        # Add in bottom partition
+                        conn_nodes = random.sample(bottom_nodes, 2)
+                        self.G.add_edge(conn_nodes[0], conn_nodes[1])
+                    else:
+                        # Add in top partition
+                        conn_nodes = random.sample(top_nodes, 2)
+                        self.G.add_edge(conn_nodes[0], conn_nodes[1])
+                    print(f"Adding edge ({conn_nodes[0]},{conn_nodes[1]})")
+                else:
+                    keep = True
+
     def build_qubo():
         pass
 
@@ -102,26 +160,41 @@ def main(track_mlflow=False):
         mlflow.set_tracking_uri(tracking_uri)
         mlflow.set_experiment(experiment_name)
 
-        
     # Number of nodes
     N = 10
     # MAX iterations
     MAX_ITERATIONS = 1000
 
-    # Generating a graph of 10 nodes
-    G_unif = GraphInstance(nx.gnm_random_graph(N, 30), "Uniform Random")
+    # Generating a graph of erdos renyi graph
+    G_unif = GraphInstance(nx.erdos_renyi_graph(N, p=0.5), "Uniform Random")
     G_pl_tree = GraphInstance(
         nx.random_powerlaw_tree(N, gamma=3, seed=None, tries=1000), "Power Law Tree"
     )
     G_wattz = GraphInstance(
         nx.connected_watts_strogatz_graph(N, k=4, p=0.5), "Watts-Strogatz small world"
     )
-    G_geom = GraphInstance(nx.random_geometric_graph(N, radius=4), "Geometric")
-    G_nc_bipart = GraphInstance(
-        nx.complete_bipartite_graph(int(N / 2), int(N / 2)), "Nearly Complete BiPartite"
+
+    random_radius = random.uniform(0, np.sqrt(2))
+    G_geom = GraphInstance(
+        nx.random_geometric_graph(N, radius=random_radius), "Geometric"
     )
 
-    G_instances = [G_unif, G_pl_tree, G_wattz, G_geom, G_nc_bipart]
+    # Create a nearly compelte bi partite graph
+    # Randomly generate the size of one partiton
+    n_part_1 = random.randint(1, N)
+    n_part_2 = N - n_part_1
+    G_nc_bipart = GraphInstance(
+        nx.complete_bipartite_graph(n_part_1, n_part_2), "Nearly Complete BiPartite"
+    )
+    G_nc_bipart.nearly_complete()
+
+    G_instances = [
+        G_unif,
+        G_pl_tree,
+        G_wattz,
+        G_geom,
+        G_nc_bipart
+    ]
 
     for i, graph_instance in enumerate(G_instances):
         print(
@@ -131,7 +204,10 @@ def main(track_mlflow=False):
         # Show instance features
         graph_features = get_graph_features(graph_instance.G)
         instance_type_logging = to_snake_case(graph_instance.graph_type)
-        graph_features = {instance_type_logging + "_" + str(key): val for key, val in graph_features.items()}
+        graph_features = {
+            instance_type_logging + "_" + str(key): val
+            for key, val in graph_features.items()
+        }
         print(json.dumps(graph_features, indent=4))
         if track_mlflow:
             mlflow.log_params(graph_features)
@@ -159,6 +235,19 @@ def main(track_mlflow=False):
 
         colors = ["r" if xbest_brute[i] == 0 else "c" for i in range(n)]
         pos = nx.spring_layout(G)
+        if graph_instance.graph_type == "Nearly Complete BiPartite":
+            pos = {}
+            bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(G)
+            bottom_nodes = list(bottom_nodes)
+            top_nodes = list(top_nodes)
+            pos.update(
+                (i, (i - bottom_nodes[-1] / 2, 1)) for i in range(bottom_nodes[-1])
+            )
+            pos.update(
+                (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
+                for i in range(bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1])
+            )
+
         print(
             "\nBest solution = " + str(xbest_brute) + " cost = " + str(best_cost_brute)
         )
@@ -292,11 +381,18 @@ def main(track_mlflow=False):
         if track_mlflow:
             print(
                 f"\n{'-'*50}\n Logging Results for {instance_type_logging}\n{'-'*50}\n"
-            )            
+            )
             mlflow.log_metric(f"energy_gap_{instance_type_logging}", energy_gap)
-            mlflow.log_metric(f"final_energy_{instance_type_logging}", algo_result.eigenvalue.real)
-            mlflow.log_metric(f"maxcut_objective_{instance_type_logging}", algo_result.eigenvalue.real + offset)
-            mlflow.log_metric(f"solution_objective_{instance_type_logging}",  qp.objective.evaluate(x))
+            mlflow.log_metric(
+                f"final_energy_{instance_type_logging}", algo_result.eigenvalue.real
+            )
+            mlflow.log_metric(
+                f"maxcut_objective_{instance_type_logging}",
+                algo_result.eigenvalue.real + offset,
+            )
+            mlflow.log_metric(
+                f"solution_objective_{instance_type_logging}", qp.objective.evaluate(x)
+            )
 
             with make_temp_directory() as temp_dir:
                 # Plot Network Graph
@@ -310,7 +406,7 @@ def main(track_mlflow=False):
 
                 # Plot convergence
                 convergence_plot_fn = f"convergence_plot_{instance_type_logging}.png"
-                convergence_plot_fn = os.path.join(temp_dir, convergence_plot_fn)            
+                convergence_plot_fn = os.path.join(temp_dir, convergence_plot_fn)
                 pylab.rcParams["figure.figsize"] = (12, 8)
                 pylab.plot(total_counts, values, label=type(optimizer).__name__)
                 pylab.xlabel("Eval count")
@@ -318,9 +414,8 @@ def main(track_mlflow=False):
                 pylab.title("Energy convergence for various optimizers")
                 pylab.legend(loc="upper right")
                 pylab.savefig(convergence_plot_fn)
-                pylab.axhline(y=algo_result.eigenvalue.real, ls='--', c='red')
+                pylab.axhline(y=algo_result.eigenvalue.real, ls="--", c="red")
                 mlflow.log_artifact(convergence_plot_fn)
-
 
     print(f"\n{'-'*10}\n\n{'-'*10} Run Complete \n{'-'*10}\n\n{'-'*10}\n")
 
