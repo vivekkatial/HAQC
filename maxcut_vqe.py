@@ -37,6 +37,7 @@ from qiskit.algorithms.optimizers import COBYLA, L_BFGS_B, SLSQP, SPSA, NELDER_M
 # Custom Imports
 from qaoa_vrp.features.graph_features import *
 from qaoa_vrp.exp_utils import str2bool, make_temp_directory, to_snake_case
+from qaoa_vrp.generators.graph_instance import GraphInstance
 
 
 sns.set_theme()
@@ -55,103 +56,6 @@ def draw_graph(G, colors, pos):
     nx.draw_networkx_edge_labels(G, pos=pos, edge_labels=edge_labels)
 
 
-class GraphInstance:
-    def __init__(self, G, graph_type):
-        self.G = G
-        self.graph_type = graph_type
-        self.weight_matrix = None
-        self.brute_force_sol = None
-        self.removed_edges = None
-        self.added_edges = None
-
-    def __repr__(self):
-        return f"This is a {self.graph_type} {self.G} graph instance"
-
-    def allocate_random_weights(self):
-        # Allocate random costs to the edges for now
-        for (u, v) in self.G.edges():
-            self.G.edges[u, v]["weight"] = random.randint(0, 10)
-
-    def compute_weight_matrix(self):
-        G = self.G
-        n = len(G.nodes())
-        w = np.zeros([n, n])
-        for i in range(n):
-            for j in range(n):
-                temp = G.get_edge_data(i, j, default=0)
-                if temp != 0:
-                    w[i, j] = temp["weight"]
-        self.weight_matrix = w
-
-    def show_weight_matrix(self):
-        print(self.weight_matrix)
-
-    def nearly_complete(self):
-        """An algorithm to make graph "nearly bipartite". Generate a p ~ unif (0,1).
-
-        Based on p <= 0.33, 0.33 < p <= 0.66 and p > 0.66 decide whether or not to add, remove or pause the graph construction
-
-        Raises:
-            TypeError: Only works for `graph_type` is "Nearly Complete BiPartite"
-        """
-        if self.graph_type != "Nearly Complete BiPartite":
-            raise TypeError("Inapproriate graph type")
-        else:
-            keep = False
-            # Identify bipartite structure
-            bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(self.G)
-            # Sample a top and bottom node
-            bottom_nodes = list(bottom_nodes)
-            top_nodes = list(top_nodes)
-            while keep == False:
-                # generate p
-                prob = random.random()
-                # If p <= 0.33 - we remove an edge between the partitions
-                if prob <= 1 / 3:
-                    u = random.sample(bottom_nodes, 1)[0]
-                    v = random.sample(top_nodes, 1)[0]
-                    removed_edge = (u,v)
-                    self.removed_edges.append(removed_edge)
-
-                    # Check first if edge has been removed or not
-                    if removed_edge not in self.removed_edges:
-                        print(f"Removing edge ({u},{v})")
-                        # Remove an edge
-                        self.G.remove_edge(u, v)
-                    else:
-                        print("Regenerating p")
-
-                # If 0.33 < p <= 0.66 we add an edge between a single partition
-                elif prob > 1 / 3 and prob <= 2 / 3:
-                    partition = random.randint(0, 1)
-                    # Handle for cases when partitions might be only size 1
-                    if len(bottom_nodes) < 2:
-                        partition = 1
-                    elif len(top_nodes) < 2:
-                        partition = 0
-
-                    if partition == 0:
-                        # Add in bottom partition
-                        conn_nodes = random.sample(bottom_nodes, 2)
-                        self.G.add_edge(conn_nodes[0], conn_nodes[1])
-                    else:
-                        # Add in top partition
-                        conn_nodes = random.sample(top_nodes, 2)
-                        self.G.add_edge(conn_nodes[0], conn_nodes[1])
-                    print(f"Adding edge ({conn_nodes[0]},{conn_nodes[1]})")
-                else:
-                    keep = True
-
-    def build_qubo():
-        pass
-
-    def solve_qaoa():
-        pass
-
-    def solve_vqe():
-        pass
-
-
 def main(track_mlflow=False):
     if track_mlflow:
         # Configure MLFlow Stuff
@@ -162,8 +66,10 @@ def main(track_mlflow=False):
 
     # Number of nodes
     N = 10
-    # MAX iterations
-    MAX_ITERATIONS = 1000
+    # Max iterations
+    MAX_ITERATIONS = 10
+    # Number of restarts
+    N_RESTARTS = 1
 
     # Generating a graph of erdos renyi graph
     G_unif = GraphInstance(nx.erdos_renyi_graph(N, p=0.5), "Uniform Random")
@@ -181,7 +87,7 @@ def main(track_mlflow=False):
 
     # Create a nearly compelte bi partite graph
     # Randomly generate the size of one partiton
-    n_part_1 = random.randint(1, N)
+    n_part_1 = random.randint(1, N-1)
     n_part_2 = N - n_part_1
     G_nc_bipart = GraphInstance(
         nx.complete_bipartite_graph(n_part_1, n_part_2), "Nearly Complete BiPartite"
@@ -189,11 +95,11 @@ def main(track_mlflow=False):
     G_nc_bipart.nearly_complete()
 
     G_instances = [
-        G_unif,
-        G_pl_tree,
-        G_wattz,
+        # G_nc_bipart,
         G_geom,
-        G_nc_bipart
+        # G_unif,
+        # G_pl_tree,
+        # G_wattz,
     ]
 
     for i, graph_instance in enumerate(G_instances):
@@ -234,24 +140,26 @@ def main(track_mlflow=False):
                 xbest_brute = x
 
         colors = ["r" if xbest_brute[i] == 0 else "c" for i in range(n)]
-        pos = nx.spring_layout(G)
-        if graph_instance.graph_type == "Nearly Complete BiPartite":
-            pos = {}
-            bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(G)
-            bottom_nodes = list(bottom_nodes)
-            top_nodes = list(top_nodes)
-            pos.update(
-                (i, (i - bottom_nodes[-1] / 2, 1)) for i in range(bottom_nodes[-1])
-            )
-            pos.update(
-                (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
-                for i in range(bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1])
-            )
-
+        try:
+            if graph_instance.graph_type == "Nearly Complete BiPartite":
+                pos = {}
+                bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(G)
+                bottom_nodes = list(bottom_nodes)
+                top_nodes = list(top_nodes)
+                pos.update(
+                    (i, (i - bottom_nodes[-1] / 2, 1)) for i in range(bottom_nodes[-1])
+                )
+                pos.update(
+                    (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
+                    for i in range(bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1])
+                )
+        except:
+            pos = nx.spring_layout(G)
+            draw_graph(G, colors, pos)
         print(
             "\nBest solution = " + str(xbest_brute) + " cost = " + str(best_cost_brute)
         )
-        draw_graph(G, colors, pos)
+
 
         max_cut = Maxcut(graph_instance.weight_matrix)
         qp = max_cut.to_quadratic_program()
@@ -306,7 +214,6 @@ def main(track_mlflow=False):
 
         init_state = np.random.rand(num_qubits) * 2 * np.pi
         print(f"The initial state is {init_state}")
-        n_restarts = 1
         optimizer_results = []
 
         result = {"algo": None, "result": None}
@@ -320,9 +227,6 @@ def main(track_mlflow=False):
         )
 
         print(f"The initial state is {init_state}")
-
-        n_restarts = 3
-
         print(f"Testing Optimizer {i+1}: {type(optimizer).__name__}")
 
         counts = []
@@ -330,7 +234,8 @@ def main(track_mlflow=False):
 
         # Callback definition
         def store_intermediate_result(eval_count, parameters, mean, std):
-            mlflow.log_metric(f"energy_{instance_type_logging}", mean)
+            if track_mlflow:
+                mlflow.log_metric(f"energy_{instance_type_logging}", mean)
             if eval_count % 100 == 0:
                 print(
                     f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
@@ -338,7 +243,7 @@ def main(track_mlflow=False):
             counts.append(eval_count)
             values.append(mean)
 
-        for restart in range(n_restarts):
+        for restart in range(N_RESTARTS):
             print(f"Running Optimization at n_restart={restart}")
             init_state = np.random.rand(4) * 2 * np.pi
 
