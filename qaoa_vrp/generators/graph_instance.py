@@ -1,7 +1,7 @@
-
 import random
 import networkx as nx
 import numpy as np
+
 
 class GraphInstance:
     def __init__(self, G, graph_type):
@@ -52,7 +52,7 @@ class GraphInstance:
             except:
                 # Create a nearly compelte bi partite graph
                 N = len(self.G.nodes())
-                n_part_1 = random.randint(1, N-1)
+                n_part_1 = random.randint(1, N - 1)
                 n_part_2 = N - n_part_1
                 self.G = nx.complete_bipartite_graph(n_part_1, n_part_2)
                 self.nearly_complete()
@@ -67,7 +67,7 @@ class GraphInstance:
                 if prob <= 1 / 3:
                     u = random.sample(bottom_nodes, 1)[0]
                     v = random.sample(top_nodes, 1)[0]
-                    removed_edge = (u,v)
+                    removed_edge = (u, v)
                     self.removed_edges.append(removed_edge)
 
                     # Check first if edge has been removed or not

@@ -67,9 +67,9 @@ def main(track_mlflow=False):
     # Number of nodes
     N = 10
     # Max iterations
-    MAX_ITERATIONS = 10
+    MAX_ITERATIONS = 1000
     # Number of restarts
-    N_RESTARTS = 1
+    N_RESTARTS = 3
 
     # Generating a graph of erdos renyi graph
     G_unif = GraphInstance(nx.erdos_renyi_graph(N, p=0.5), "Uniform Random")
@@ -87,7 +87,7 @@ def main(track_mlflow=False):
 
     # Create a nearly compelte bi partite graph
     # Randomly generate the size of one partiton
-    n_part_1 = random.randint(1, N-1)
+    n_part_1 = random.randint(1, N - 1)
     n_part_2 = N - n_part_1
     G_nc_bipart = GraphInstance(
         nx.complete_bipartite_graph(n_part_1, n_part_2), "Nearly Complete BiPartite"
@@ -95,11 +95,11 @@ def main(track_mlflow=False):
     G_nc_bipart.nearly_complete()
 
     G_instances = [
-        # G_nc_bipart,
+        G_unif,
+        G_pl_tree,
+        G_wattz,
+        G_nc_bipart,
         G_geom,
-        # G_unif,
-        # G_pl_tree,
-        # G_wattz,
     ]
 
     for i, graph_instance in enumerate(G_instances):
@@ -159,7 +159,6 @@ def main(track_mlflow=False):
         print(
             "\nBest solution = " + str(xbest_brute) + " cost = " + str(best_cost_brute)
         )
-
 
         max_cut = Maxcut(graph_instance.weight_matrix)
         qp = max_cut.to_quadratic_program()

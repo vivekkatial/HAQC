@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 from networkx.algorithms.distance_measures import radius
 
+
 def get_graph_features(G):
     """
     Generates a list of features for the given graph
