@@ -153,6 +153,7 @@ def main(track_mlflow=False):
                     (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
                     for i in range(bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1])
                 )
+                draw_graph(G, colors, pos)
         except:
             pos = nx.spring_layout(G)
             draw_graph(G, colors, pos)
@@ -197,7 +198,6 @@ def main(track_mlflow=False):
         print("ground state objective:", qp.objective.evaluate(x))
 
         colors = ["r" if x[i] == 0 else "c" for i in range(n)]
-        # draw_graph(G, colors, pos)
 
         ################################
         # Quantum Run -- VQE
@@ -207,8 +207,6 @@ def main(track_mlflow=False):
 
         # Run optimisation code
         optimizer = COBYLA(maxiter=MAX_ITERATIONS)
-        converge_cnts = np.empty([], dtype=object)
-        converge_vals = np.empty([], dtype=object)
         num_qubits = qubitOp.num_qubits
 
         init_state = np.random.rand(num_qubits) * 2 * np.pi
@@ -300,17 +298,44 @@ def main(track_mlflow=False):
 
             with make_temp_directory() as temp_dir:
                 # Plot Network Graph
+                pylab.clf()
                 graph_plot_fn = f"network_plot_{instance_type_logging}.png"
                 graph_plot_fn = os.path.join(temp_dir, graph_plot_fn)
                 colors = ["r" if x[i] == 0 else "c" for i in range(n)]
-                draw_graph(G, colors, pos)
-                pylab.savefig(graph_plot_fn)
-                pylab.clf()
-                mlflow.log_artifact(graph_plot_fn)
+                try:
+                    if graph_instance.graph_type == "Nearly Complete BiPartite":
+                        pos = {}
+                        bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(G)
+                        bottom_nodes = list(bottom_nodes)
+                        top_nodes = list(top_nodes)
+                        pos.update(
+                            (i, (i - bottom_nodes[-1] / 2, 1))
+                            for i in range(bottom_nodes[-1])
+                        )
+                        pos.update(
+                            (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
+                            for i in range(
+                                bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1]
+                            )
+                        )
+                        draw_graph(G, colors, pos)
+                        pylab.savefig(graph_plot_fn)
+                        mlflow.log_artifact(graph_plot_fn)
+                    else:
+                        pos = nx.spring_layout(G)
+                        draw_graph(G, colors, pos)
+                        pylab.savefig(graph_plot_fn)
+                        mlflow.log_artifact(graph_plot_fn)
+                except:
+                    pos = nx.spring_layout(G)
+                    draw_graph(G, colors, pos)
+                    pylab.savefig(graph_plot_fn)
+                    mlflow.log_artifact(graph_plot_fn)
 
                 # Plot convergence
                 convergence_plot_fn = f"convergence_plot_{instance_type_logging}.png"
                 convergence_plot_fn = os.path.join(temp_dir, convergence_plot_fn)
+                pylab.clf()
                 pylab.rcParams["figure.figsize"] = (12, 8)
                 pylab.plot(total_counts, values, label=type(optimizer).__name__)
                 pylab.xlabel("Eval count")
