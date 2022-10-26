@@ -90,7 +90,7 @@ python-louvain==0.16
 pytz==2022.4
 PyYAML==6.0
 pyzmq==24.0.1
--e git+git@github.com:vivekkatial/HAQC.git@e6439b3e4e5438738eca2401b717acebc286af6a#egg=qaoa_vrp
+-e git+git@github.com:vivekkatial/HAQC.git@91a4ffdd3442e5950f24fe68c38960ba340c13f0#egg=qaoa_vrp
 qiskit==0.39.0
 qiskit-aer==0.11.0
 qiskit-ibmq-provider==0.19.2
