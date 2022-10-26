@@ -322,7 +322,7 @@ def main(track_mlflow=False):
                 pylab.axhline(y=algo_result.eigenvalue.real, ls="--", c="red")
                 mlflow.log_artifact(convergence_plot_fn)
 
-    print(f"\n{'-'*10}\n\n{'-'*10} Run Complete \n{'-'*10}\n\n{'-'*10}\n")
+    print(f"\n{'-'*50}\n{'-'*50}\n{' '*18} Run Complete \n{'-'*50}\n{'-'*50}\n")
 
 
 if __name__ == "__main__":
