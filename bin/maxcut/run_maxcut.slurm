@@ -18,4 +18,4 @@
 module load singularity/3.5.3
 
 # The command to actually run the job
-singularity run --app run_optimizer vqe_maxcut.img
+singularity run --app run_vqe_maxcut vqe_maxcut.img

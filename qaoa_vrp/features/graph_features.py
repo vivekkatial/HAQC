@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+from networkx.algorithms.distance_measures import radius
 
 
 def get_graph_features(G):
@@ -23,7 +24,15 @@ def get_graph_features(G):
     features[
         "algebraic_connectivity"
     ] = nx.linalg.algebraicconnectivity.algebraic_connectivity(G, method="lanczos")
-    features["average_distance"] = nx.average_shortest_path_length(G)
+    try:
+        features["average_distance"] = nx.average_shortest_path_length(G)
+    except:
+        # Handle distance for dis-connected
+        distances = []
+        for C in (G.subgraph(c).copy() for c in nx.connected_components(G)):
+            distances.append(nx.average_shortest_path_length(C))
+        average_distance = np.mean(distances)
+        features["average_distance"] = average_distance
     features["bipartite"] = nx.is_bipartite(G)
 
     # features['Chromatic Index'] =
@@ -32,7 +41,10 @@ def get_graph_features(G):
     features["clique_number"] = nx.graph_clique_number(G)
     features["connected"] = nx.algorithms.components.is_connected(G)
     features["density"] = nx.classes.function.density(G)
-    features["diameter"] = nx.algorithms.distance_measures.diameter(G)
+    if nx.algorithms.components.is_connected(G):
+        features["diameter"] = nx.algorithms.distance_measures.diameter(G)
+    else:
+        features["diameter"] = 0
     features[
         "edge_connectivity"
     ] = nx.algorithms.connectivity.connectivity.edge_connectivity(G)
@@ -57,7 +69,12 @@ def get_graph_features(G):
     # features['number_of_triangles'] = nx.algorithms.cluster.triangles(G)
     features["number_of_vertices"] = G.number_of_nodes()
     features["planar"] = nx.algorithms.planarity.check_planarity(G)[0]
-    features["radius"] = nx.algorithms.distance_measures.radius(G)
+
+    if nx.algorithms.components.is_connected(G):
+        features["radius"] = nx.algorithms.distance_measures.radius(G)
+    else:
+        features["radius"] = 0
+
     features["regular"] = nx.algorithms.regular.is_regular(G)
     features["laplacian_second_largest_eigenvalue"] = sorted(e)[1]
     features["ratio_of_two_largest_laplacian_eigenvaleus"] = max(e) / sorted(e)[1]

@@ -66,7 +66,7 @@ def run_qaoa_parallel_control_max_restarts(args):
         quantum_instance = QuantumInstance(
             backend, seed_simulator=seed, seed_transpiler=seed
         )
-        
+
         # Initialise QAOA
         qaoa = QAOA(
             operator=op,

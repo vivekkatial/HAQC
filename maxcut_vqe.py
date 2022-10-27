@@ -37,6 +37,7 @@ from qiskit.algorithms.optimizers import COBYLA, L_BFGS_B, SLSQP, SPSA, NELDER_M
 # Custom Imports
 from qaoa_vrp.features.graph_features import *
 from qaoa_vrp.exp_utils import str2bool, make_temp_directory, to_snake_case
+from qaoa_vrp.generators.graph_instance import GraphInstance
 
 
 sns.set_theme()
@@ -55,45 +56,6 @@ def draw_graph(G, colors, pos):
     nx.draw_networkx_edge_labels(G, pos=pos, edge_labels=edge_labels)
 
 
-class GraphInstance:
-    def __init__(self, G, graph_type):
-        self.G = G
-        self.graph_type = graph_type
-        self.weight_matrix = None
-        self.brute_force_sol = None
-
-    def __repr__(self):
-        return f"This is a {self.graph_type} {self.G} graph instance"
-
-    def allocate_random_weights(self):
-        # Allocate random costs to the edges for now
-        for (u, v) in self.G.edges():
-            self.G.edges[u, v]["weight"] = random.randint(0, 10)
-
-    def compute_weight_matrix(self):
-        G = self.G
-        n = len(G.nodes())
-        w = np.zeros([n, n])
-        for i in range(n):
-            for j in range(n):
-                temp = G.get_edge_data(i, j, default=0)
-                if temp != 0:
-                    w[i, j] = temp["weight"]
-        self.weight_matrix = w
-
-    def show_weight_matrix(self):
-        print(self.weight_matrix)
-
-    def build_qubo():
-        pass
-
-    def solve_qaoa():
-        pass
-
-    def solve_vqe():
-        pass
-
-
 def main(track_mlflow=False):
     if track_mlflow:
         # Configure MLFlow Stuff
@@ -102,26 +64,43 @@ def main(track_mlflow=False):
         mlflow.set_tracking_uri(tracking_uri)
         mlflow.set_experiment(experiment_name)
 
-        
     # Number of nodes
     N = 10
-    # MAX iterations
+    # Max iterations
     MAX_ITERATIONS = 1000
+    # Number of restarts
+    N_RESTARTS = 3
 
-    # Generating a graph of 10 nodes
-    G_unif = GraphInstance(nx.gnm_random_graph(N, 30), "Uniform Random")
+    # Generating a graph of erdos renyi graph
+    G_unif = GraphInstance(nx.erdos_renyi_graph(N, p=0.5), "Uniform Random")
     G_pl_tree = GraphInstance(
         nx.random_powerlaw_tree(N, gamma=3, seed=None, tries=1000), "Power Law Tree"
     )
     G_wattz = GraphInstance(
         nx.connected_watts_strogatz_graph(N, k=4, p=0.5), "Watts-Strogatz small world"
     )
-    G_geom = GraphInstance(nx.random_geometric_graph(N, radius=4), "Geometric")
-    G_nc_bipart = GraphInstance(
-        nx.complete_bipartite_graph(int(N / 2), int(N / 2)), "Nearly Complete BiPartite"
+
+    random_radius = random.uniform(0, np.sqrt(2))
+    G_geom = GraphInstance(
+        nx.random_geometric_graph(N, radius=random_radius), "Geometric"
     )
 
-    G_instances = [G_unif, G_pl_tree, G_wattz, G_geom, G_nc_bipart]
+    # Create a nearly compelte bi partite graph
+    # Randomly generate the size of one partiton
+    n_part_1 = random.randint(1, N - 1)
+    n_part_2 = N - n_part_1
+    G_nc_bipart = GraphInstance(
+        nx.complete_bipartite_graph(n_part_1, n_part_2), "Nearly Complete BiPartite"
+    )
+    G_nc_bipart.nearly_complete()
+
+    G_instances = [
+        G_unif,
+        G_pl_tree,
+        G_wattz,
+        G_nc_bipart,
+        G_geom,
+    ]
 
     for i, graph_instance in enumerate(G_instances):
         print(
@@ -131,7 +110,10 @@ def main(track_mlflow=False):
         # Show instance features
         graph_features = get_graph_features(graph_instance.G)
         instance_type_logging = to_snake_case(graph_instance.graph_type)
-        graph_features = {instance_type_logging + "_" + str(key): val for key, val in graph_features.items()}
+        graph_features = {
+            instance_type_logging + "_" + str(key): val
+            for key, val in graph_features.items()
+        }
         print(json.dumps(graph_features, indent=4))
         if track_mlflow:
             mlflow.log_params(graph_features)
@@ -158,11 +140,26 @@ def main(track_mlflow=False):
                 xbest_brute = x
 
         colors = ["r" if xbest_brute[i] == 0 else "c" for i in range(n)]
-        pos = nx.spring_layout(G)
+        try:
+            if graph_instance.graph_type == "Nearly Complete BiPartite":
+                pos = {}
+                bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(G)
+                bottom_nodes = list(bottom_nodes)
+                top_nodes = list(top_nodes)
+                pos.update(
+                    (i, (i - bottom_nodes[-1] / 2, 1)) for i in range(bottom_nodes[-1])
+                )
+                pos.update(
+                    (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
+                    for i in range(bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1])
+                )
+                draw_graph(G, colors, pos)
+        except:
+            pos = nx.spring_layout(G)
+            draw_graph(G, colors, pos)
         print(
             "\nBest solution = " + str(xbest_brute) + " cost = " + str(best_cost_brute)
         )
-        draw_graph(G, colors, pos)
 
         max_cut = Maxcut(graph_instance.weight_matrix)
         qp = max_cut.to_quadratic_program()
@@ -201,7 +198,6 @@ def main(track_mlflow=False):
         print("ground state objective:", qp.objective.evaluate(x))
 
         colors = ["r" if x[i] == 0 else "c" for i in range(n)]
-        # draw_graph(G, colors, pos)
 
         ################################
         # Quantum Run -- VQE
@@ -211,13 +207,10 @@ def main(track_mlflow=False):
 
         # Run optimisation code
         optimizer = COBYLA(maxiter=MAX_ITERATIONS)
-        converge_cnts = np.empty([], dtype=object)
-        converge_vals = np.empty([], dtype=object)
         num_qubits = qubitOp.num_qubits
 
         init_state = np.random.rand(num_qubits) * 2 * np.pi
         print(f"The initial state is {init_state}")
-        n_restarts = 1
         optimizer_results = []
 
         result = {"algo": None, "result": None}
@@ -231,9 +224,6 @@ def main(track_mlflow=False):
         )
 
         print(f"The initial state is {init_state}")
-
-        n_restarts = 3
-
         print(f"Testing Optimizer {i+1}: {type(optimizer).__name__}")
 
         counts = []
@@ -241,7 +231,8 @@ def main(track_mlflow=False):
 
         # Callback definition
         def store_intermediate_result(eval_count, parameters, mean, std):
-            mlflow.log_metric(f"energy_{instance_type_logging}", mean)
+            if track_mlflow:
+                mlflow.log_metric(f"energy_{instance_type_logging}", mean)
             if eval_count % 100 == 0:
                 print(
                     f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
@@ -249,7 +240,7 @@ def main(track_mlflow=False):
             counts.append(eval_count)
             values.append(mean)
 
-        for restart in range(n_restarts):
+        for restart in range(N_RESTARTS):
             print(f"Running Optimization at n_restart={restart}")
             init_state = np.random.rand(4) * 2 * np.pi
 
@@ -292,25 +283,59 @@ def main(track_mlflow=False):
         if track_mlflow:
             print(
                 f"\n{'-'*50}\n Logging Results for {instance_type_logging}\n{'-'*50}\n"
-            )            
+            )
             mlflow.log_metric(f"energy_gap_{instance_type_logging}", energy_gap)
-            mlflow.log_metric(f"final_energy_{instance_type_logging}", algo_result.eigenvalue.real)
-            mlflow.log_metric(f"maxcut_objective_{instance_type_logging}", algo_result.eigenvalue.real + offset)
-            mlflow.log_metric(f"solution_objective_{instance_type_logging}",  qp.objective.evaluate(x))
+            mlflow.log_metric(
+                f"final_energy_{instance_type_logging}", algo_result.eigenvalue.real
+            )
+            mlflow.log_metric(
+                f"maxcut_objective_{instance_type_logging}",
+                algo_result.eigenvalue.real + offset,
+            )
+            mlflow.log_metric(
+                f"solution_objective_{instance_type_logging}", qp.objective.evaluate(x)
+            )
 
             with make_temp_directory() as temp_dir:
                 # Plot Network Graph
+                pylab.clf()
                 graph_plot_fn = f"network_plot_{instance_type_logging}.png"
                 graph_plot_fn = os.path.join(temp_dir, graph_plot_fn)
                 colors = ["r" if x[i] == 0 else "c" for i in range(n)]
-                draw_graph(G, colors, pos)
-                pylab.savefig(graph_plot_fn)
-                pylab.clf()
-                mlflow.log_artifact(graph_plot_fn)
+                try:
+                    if graph_instance.graph_type == "Nearly Complete BiPartite":
+                        pos = {}
+                        bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(G)
+                        bottom_nodes = list(bottom_nodes)
+                        top_nodes = list(top_nodes)
+                        pos.update(
+                            (i, (i - bottom_nodes[-1] / 2, 1))
+                            for i in range(bottom_nodes[-1])
+                        )
+                        pos.update(
+                            (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
+                            for i in range(
+                                bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1]
+                            )
+                        )
+                        draw_graph(G, colors, pos)
+                        pylab.savefig(graph_plot_fn)
+                        mlflow.log_artifact(graph_plot_fn)
+                    else:
+                        pos = nx.spring_layout(G)
+                        draw_graph(G, colors, pos)
+                        pylab.savefig(graph_plot_fn)
+                        mlflow.log_artifact(graph_plot_fn)
+                except:
+                    pos = nx.spring_layout(G)
+                    draw_graph(G, colors, pos)
+                    pylab.savefig(graph_plot_fn)
+                    mlflow.log_artifact(graph_plot_fn)
 
                 # Plot convergence
                 convergence_plot_fn = f"convergence_plot_{instance_type_logging}.png"
-                convergence_plot_fn = os.path.join(temp_dir, convergence_plot_fn)            
+                convergence_plot_fn = os.path.join(temp_dir, convergence_plot_fn)
+                pylab.clf()
                 pylab.rcParams["figure.figsize"] = (12, 8)
                 pylab.plot(total_counts, values, label=type(optimizer).__name__)
                 pylab.xlabel("Eval count")
@@ -318,11 +343,10 @@ def main(track_mlflow=False):
                 pylab.title("Energy convergence for various optimizers")
                 pylab.legend(loc="upper right")
                 pylab.savefig(convergence_plot_fn)
-                pylab.axhline(y=algo_result.eigenvalue.real, ls='--', c='red')
+                pylab.axhline(y=algo_result.eigenvalue.real, ls="--", c="red")
                 mlflow.log_artifact(convergence_plot_fn)
 
-
-    print(f"\n{'-'*10}\n\n{'-'*10} Run Complete \n{'-'*10}\n\n{'-'*10}\n")
+    print(f"\n{'-'*50}\n{'-'*50}\n{' '*18} Run Complete \n{'-'*50}\n{'-'*50}\n")
 
 
 if __name__ == "__main__":
