@@ -80,7 +80,8 @@ def main(track_mlflow=False):
         nx.connected_watts_strogatz_graph(N, k=4, p=0.5), "Watts-Strogatz small world"
     )
 
-    random_radius = random.uniform(0, np.sqrt(2))
+    # Use a radius that is connected 95% of the time
+    random_radius = random.uniform(0.6467007, np.sqrt(2))
     G_geom = GraphInstance(
         nx.random_geometric_graph(N, radius=random_radius), "Geometric"
     )
