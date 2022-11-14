@@ -80,10 +80,18 @@ def main(track_mlflow=False):
         nx.connected_watts_strogatz_graph(N, k=4, p=0.5), "Watts-Strogatz small world"
     )
 
-    # Use a radius that is connected 95% of the time
-    random_radius = random.uniform(0.6467007, np.sqrt(2))
+    connected = False
+    geom_guess = 0
+    while connected is False:
+        geom_guess += 1
+        # Use a radius that is connected 95% of the time
+        random_radius = random.uniform(0.24, np.sqrt(2))
+        g_geom = nx.random_geometric_graph(N, radius=random_radius)
+        connected = nx.algorithms.components.is_connected(g_geom)
+        print(f"Guess {geom_guess} for producing a connected Geometric Graph with r={random_radius} - connected: {connected}")
+
     G_geom = GraphInstance(
-        nx.random_geometric_graph(N, radius=random_radius), "Geometric"
+        g_geom, "Geometric"
     )
 
     # Create a nearly compelte bi partite graph
