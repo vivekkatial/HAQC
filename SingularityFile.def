@@ -16,6 +16,16 @@ From: python:3.9.2
     MLFLOW_PYTHON_BIN=/usr/local/bin/python
     MLFLOW_BIN=/usr/local/bin/mlflow
     S3_BUCKET=s3://vrp-qaoa
+    POETRY_VERSION
+
+    # Poetry Environment Variables
+    PYTHONFAULTHANDLER=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONHASHSEED=random \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_DEFAULT_TIMEOUT=100 \
+    POETRY_VERSION=1.1.14
 
     # Export env vars for LC_ALL
     export LC_ALL=en_US.UTF-8
@@ -26,7 +36,8 @@ From: python:3.9.2
       MLFLOW_S3_ENDPOINT_URL \
       MLFLOW_PYTHON_BIN \
       MLFLOW_BIN \
-      S3_BUCKET
+      S3_BUCKET \
+      POETRY_VERSION
 
 %post
   # Print image info
@@ -54,7 +65,10 @@ From: python:3.9.2
   pip install --upgrade pip
   git clone https://github.com/vivekkatial/HAQC.git
   cd HAQC
-  pip install -r requirements.txt
+  pip install "poetry==$POETRY_VERSION"
+  poetry config virtualenvs.create false \
+  && poetry install --no-interaction --no-ansi
+
 
   ####################################################
   # AWS Installation
