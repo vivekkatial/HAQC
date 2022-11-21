@@ -66,7 +66,7 @@ From: python:3.9.2
   pip install "poetry==$POETRY_VERSION"
   cd HAQC
   poetry config virtualenvs.create false \
-  && poetry install --no-interaction --no-ansi
+  && poetry install
 
 
   ####################################################
