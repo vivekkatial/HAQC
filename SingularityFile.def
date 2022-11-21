@@ -16,7 +16,6 @@ From: python:3.9.2
     MLFLOW_PYTHON_BIN=/usr/local/bin/python
     MLFLOW_BIN=/usr/local/bin/mlflow
     S3_BUCKET=s3://vrp-qaoa
-    POETRY_VERSION
 
     # Poetry Environment Variables
     PYTHONFAULTHANDLER=1 \
