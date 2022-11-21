@@ -1,8 +1,12 @@
 [tool.poetry]
-name = "haqc"
+name = "HAQC"
 version = "0.1.0"
 description = ""
 authors = ["Vivek Katial <vivekkatial@gmail.com>"]
+packages = [
+    { include = "qaoa_vrp", from = "qaoa_vrp"}
+]
+
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -132,7 +136,7 @@ websockets = "10.3"
 Werkzeug = "2.2.2"
 widgetsnbextension = "4.0.3"
 zipp = "3.9.0"
-haqc = {path = ".", develop = true}
+
 
 [tool.poetry.dev-dependencies]
 
