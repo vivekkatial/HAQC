@@ -65,6 +65,7 @@ From: python:3.9.2
   git clone https://github.com/vivekkatial/HAQC.git
   pip install "poetry==$POETRY_VERSION"
   cd HAQC
+  poetry config -vvv
   poetry config virtualenvs.create false \
   && poetry install
 
