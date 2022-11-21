@@ -16,6 +16,15 @@ From: python:3.9.2
     MLFLOW_PYTHON_BIN=/usr/local/bin/python
     MLFLOW_BIN=/usr/local/bin/mlflow
     S3_BUCKET=s3://vrp-qaoa
+    POETRY_VERSION
+
+    # Poetry Environment Variables
+    PYTHONFAULTHANDLER=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONHASHSEED=random \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_DEFAULT_TIMEOUT=100
 
     # Export env vars for LC_ALL
     export LC_ALL=en_US.UTF-8
@@ -47,14 +56,19 @@ From: python:3.9.2
   /usr/sbin/update-locale LANG=en_US.UTF-8
   export LC_ALL=en_US.UTF-8
   export LANG=en_US.UTF-8
+  export POETRY_VERSION=1.1.14
 
   ####################################################
   # Python / QISKit Installation
   ####################################################
   pip install --upgrade pip
   git clone https://github.com/vivekkatial/HAQC.git
+  pip install "poetry==$POETRY_VERSION"
   cd HAQC
-  pip install -r requirements.txt
+  cat pyproject.toml
+  poetry config virtualenvs.create false \
+  && poetry install --no-interaction --no-ansi
+
 
   ####################################################
   # AWS Installation
