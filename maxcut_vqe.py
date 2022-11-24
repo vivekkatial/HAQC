@@ -103,12 +103,18 @@ def main(track_mlflow=False):
     )
     G_nc_bipart.nearly_complete()
 
+    # Create a 3-regular graph (based on https://arxiv.org/pdf/2106.10055.pdf)
+    G_three_regular = GraphInstance(
+        nx.random_regular_graph(d=3,n=N), graph_type="3-Regular Graph"
+    )
+
     G_instances = [
-        G_unif,
-        G_pl_tree,
-        G_wattz,
-        G_nc_bipart,
-        G_geom,
+        # G_unif,
+        # G_pl_tree,
+        # G_wattz,
+        # G_nc_bipart,
+        # G_geom,
+        G_three_regular
     ]
 
     for i, graph_instance in enumerate(G_instances):
