@@ -68,16 +68,16 @@ python qaoa_vrp/main.py -f test -T False # -T tracking for MLFlow
 
 First ensure that your Python is _not_ aliased in your `.bashrc` or `.zshrc` file.
 
-After this launch your `pipenv` by
+After this launch your `poetry` by
 
 ```{shell}
-pipenv shell
+poetry shell
 ```
 
 Then do:
 
 ```{shell}
-python -m ipykernel install --user --name=qaoa-vrp
+python -m ipykernel install --user --name=ENV_NAME
 ```
 
 Then launch the notebook
@@ -89,6 +89,17 @@ jupyter notebook
 In your notebook, Kernel -> Change Kernel. Your kernel should now be an option.
 
 <img src='images/jupyter-install.png'/>
+
+## Singularity
+
+This project leverages [Singularity](https://github.com/singularityhub/) to ensure the code is reproducible and manage dependencies. 
+
+You can find the recipe for our container in `SingularityFile.def`. There are various apps for each different type of experiment we run,
+
+
+## CI/CD 
+
+We use Github Actions for CI/CD. Everytime a PR is created, a test build of the singularity container runs. When merging into `main` we do a release of the container.
 
 ## Authors
 - Vivek Katial
