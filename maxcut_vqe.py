@@ -109,11 +109,11 @@ def main(track_mlflow=False):
     )
 
     G_instances = [
-        # G_unif,
-        # G_pl_tree,
-        # G_wattz,
-        # G_nc_bipart,
-        # G_geom,
+        G_unif,
+        G_pl_tree,
+        G_wattz,
+        G_nc_bipart,
+        G_geom,
         G_three_regular
     ]
 
