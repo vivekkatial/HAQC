@@ -88,11 +88,11 @@ def main(track_mlflow=False):
         random_radius = random.uniform(0.24, np.sqrt(2))
         g_geom = nx.random_geometric_graph(N, radius=random_radius)
         connected = nx.algorithms.components.is_connected(g_geom)
-        print(f"Guess {geom_guess} for producing a connected Geometric Graph with r={random_radius} - connected: {connected}")
+        print(
+            f"Guess {geom_guess} for producing a connected Geometric Graph with r={random_radius} - connected: {connected}"
+        )
 
-    G_geom = GraphInstance(
-        g_geom, "Geometric"
-    )
+    G_geom = GraphInstance(g_geom, "Geometric")
 
     # Create a nearly compelte bi partite graph
     # Randomly generate the size of one partiton
@@ -105,17 +105,10 @@ def main(track_mlflow=False):
 
     # Create a 3-regular graph (based on https://arxiv.org/pdf/2106.10055.pdf)
     G_three_regular = GraphInstance(
-        nx.random_regular_graph(d=3,n=N), graph_type="3-Regular Graph"
+        nx.random_regular_graph(d=3, n=N), graph_type="3-Regular Graph"
     )
 
-    G_instances = [
-        G_unif,
-        G_pl_tree,
-        G_wattz,
-        G_nc_bipart,
-        G_geom,
-        G_three_regular
-    ]
+    G_instances = [G_unif, G_pl_tree, G_wattz, G_nc_bipart, G_geom, G_three_regular]
 
     for i, graph_instance in enumerate(G_instances):
         print(
