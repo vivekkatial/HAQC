@@ -3,7 +3,7 @@ name: singularity-deploy
 on:
   push:
     branches:
-      - "main-branch"
+      - "main"
 
 jobs:
   release:
