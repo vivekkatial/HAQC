@@ -2,10 +2,10 @@ import base64
 import uuid
 from collections import defaultdict
 from itertools import count
-
 import networkx as nx
 import numpy as np
-from qiskit import BasicAer, execute
+from qiskit import Aer, execute
+from qiskit.providers.aer import QasmSimulator
 from qiskit.aqua import QuantumInstance, aqua_globals
 from qiskit.aqua.algorithms import QAOA, NumPyMinimumEigensolver
 from qiskit.aqua.components.optimizers import ADAM, AQGD, COBYLA, NELDER_MEAD
@@ -27,6 +27,7 @@ def build_qubos(clusters, depot_info, A=30):
     Returns:
         list: A list of QUBO formulations
     """
+
     qubos = []
     for subgraph in clusters:
         cluster = clusters[subgraph]
@@ -152,69 +153,7 @@ def build_qubos(clusters, depot_info, A=30):
     return qubos
 
 
-def qubo_to_qaoa(qubo, num_layers):
-    """Function to build QAOA circuit from QUBO formulations
-
-    Args:
-        qubo (object): Qiskit `QuadraticProgram` object
-        num_layers (int): Number of layers (p)
-
-    Returns:
-        [type]: A tuple where element [0] is a QAOA qiskit circuit object, and [1] is
-    """
-    op, offset = qubo.to_ising()
-
-    quantum_instance = QuantumInstance(
-        BasicAer.get_backend("statevector_simulator"),
-        seed_simulator=aqua_globals.random_seed,
-        seed_transpiler=aqua_globals.random_seed,
-    )
-
-    qaoa = QAOA(
-        operator=op,
-        p=num_layers,
-        quantum_instance=quantum_instance,
-        initial_point=list(2 * np.pi * np.random.random(2 * num_layers)),
-    )
-
-    # Create QAOA parameter list:
-    params_expr = []
-
-    for a in range(num_layers):  # "gamma_n" parameters
-        params_expr.append(Parameter("a" + str(a + 1)))
-
-    for b in range(num_layers):  # "beta_n" parameters
-        params_expr.append(Parameter("b" + str(b + 1)))
-
-    # Create qaoa circuit with arbitrary parameters
-    circuit = qaoa.construct_circuit(params_expr[0 : 2 * num_layers])[0]
-
-    return qaoa, circuit, params_expr
-
-
-def measure_energy(qubo, qc):
-    """Measure QAOA Circuit Energy
-
-    Args:
-        qubo (object): qiskit QUBO obejct
-        qc (object): qiskit QuantumCircuit object
-
-    Returns:
-        float : Energy of QC
-    """
-    state_vector = (
-        execute(qc, backend=Aer.get_backend("statevector_simulator"))
-        .result()
-        .get_statevector()
-    )
-    hamiltonian = qubo.to_ising()[0].to_matrix(massive=True)
-    ham_state = np.matmul(hamiltonian, state_vector)
-    energy = np.dot(ham_state, np.conjugate(state_vector))
-    energy = energy.real
-    return energy
-
-
-def solve_qubo_qaoa(qubo, p, points):
+def solve_qubo_qaoa(qubo, p, backend, points=None):
     """
     Create QAOA from given qubo, and solves for both the exact value and the QAOA
 
@@ -233,18 +172,31 @@ def solve_qubo_qaoa(qubo, p, points):
 
     op, offset = qubo.to_ising()
 
-    qaoa = QAOA(operator=op, p=p,  initial_point=list(2*np.pi*np.random.random(2*p)), optimizer=NELDER_MEAD())
-    # qaoa = QAOA(operator=op, p=p, initial_point=points, optimizer=NELDER_MEAD())
+    if backend == "statevector_simulator":
+        method = Aer.get_backend("statevector_simulator")
+    elif backend == "matrix_product_state":
+        method = QasmSimulator(method="matrix_product_state")
 
+    num_qubits = qubo.get_num_vars()
     quantum_instance = QuantumInstance(
-        BasicAer.get_backend("statevector_simulator"),
+        method,
+        shots=(2 ** np.sqrt(num_qubits)) * 2048,
         seed_simulator=aqua_globals.random_seed,
         seed_transpiler=aqua_globals.random_seed,
     )
 
-    qaoa_result = qaoa.run(quantum_instance)
+    qaoa_meas = QAOA(
+        quantum_instance=quantum_instance,
+        p=p,
+        initial_point=list(2 * np.pi * np.random.random(2 * p)),
+    )
 
-    return qaoa_result, exact_result, offset
+    qaoa = MinimumEigenOptimizer(qaoa_meas)
+    qaoa_result = qaoa.solve(qubo)
+
+    num_qubits = qaoa.min_eigen_solver.get_optimal_circuit().num_qubits
+
+    return qaoa_result, exact_result, offset, num_qubits
 
 
 def interp_point(optimal_point):
@@ -300,7 +252,7 @@ def index_to_selection(i, num_assets):
     return x
 
 
-def print_result(qubo, result, num_qubits, exact_value):
+def print_result(qubo, qaoa_result, num_qubits, exact_value, backend):
     """
     Prints the results of the QAOA in a nice form
 
@@ -310,12 +262,20 @@ def print_result(qubo, result, num_qubits, exact_value):
         num_qubits (int): the number of qubits in the QAOA circuit
     """
 
-    eigenvector = (
-        result.eigenstate
-        if isinstance(result.eigenstate, np.ndarray)
-        else result.eigenstate.to_matrix()
-    )
-    probabilities = np.abs(eigenvector) ** 2
+    if backend == "statevector_simulator":
+        eigenvector = (
+            qaoa_result.min_eigen_solver_result["eigenstate"]
+            if isinstance(qaoa_result.min_eigen_solver_result["eigenstate"], np.ndarray)
+            else qaoa_result.min_eigen_solver_result["eigenstate"].to_matrix()
+        )
+        probabilities = np.abs(eigenvector) ** 2
+    elif backend == "matrix_product_state":
+        probabilities = []
+        for eigenstate in qaoa_result.min_eigen_solver_result["eigenstate"]:
+            probabilities.append(
+                qaoa_result.min_eigen_solver_result["eigenstate"][eigenstate] / 1024
+            )
+
     i_sorted = reversed(np.argsort(probabilities))
     print("----------------- Full result ---------------------")
     print("index\tselection\t\tvalue\t\tprobability")
@@ -427,125 +387,3 @@ def to_hamiltonian_dicts(quadratic_program: QuadraticProgram):
         linear_terms[j] -= weight
 
     return num_nodes, linear_terms, quadratic_terms
-
-
-def generate_circuit_pb(n, linear_terms, quadratic_terms, gamma, beta):
-    """
-    Constructs a QAOA circuit in the Protobuf format used by QUI.
-
-    Args:
-        n (int): Integer number of qubits
-        linear_terms (defaultdict[int, float]): Coefficients of Z_i terms in the
-            Hamiltonian.
-        quadratic_terms (defaultdict[Tuple[int, int], float]): Coefficients of Z_i Z_j
-            terms in the Hamiltonian
-        gamma (List[float]): gamma values to use in the QAOA circuit, one for each layer
-        beta (List[float]): beta values to use in the QAOA circuit, one for each layer
-
-    Returns:
-        pb_string (str): base64 string representation of the QAOA circuit in QUI's
-            Protobuf format
-    """
-    if len(gamma) != len(beta):
-        raise ValueError("Incorrect number of optimisation parameters provided.")
-
-    import proto.circuit_pb2 as circuit_pb2
-
-    circuit = circuit_pb2.Circuit()
-    circuit.id = str(uuid.uuid4())
-    circuit.num_qubits = n
-
-    time_block_itercount = count()
-
-    def new_time_block():
-        time_block = circuit.time_blocks.add()
-        time_block.id = str(uuid.uuid4())
-        return next(time_block_itercount), time_block
-
-    _, hadamard_time_block = new_time_block()
-    for i in range(n):
-        component = hadamard_time_block.components.add()
-        component.type = circuit_pb2.Component.GATE
-        component.gate.type = circuit_pb2.Gate.H
-        component.qubits[:] = [i]
-
-    def new_time_block_group(name, initial_tb_idx, final_tb_idx, expanded=False):
-        group = circuit.time_block_groups.add()
-        group.name = name
-        group.start_time_block_idx = initial_tb_idx
-        group.end_time_block_idx = final_tb_idx
-        group.expanded = expanded
-
-    def linear_layer(g):
-        _, time_block = new_time_block()
-        for i, coeff in linear_terms.items():
-            if coeff:
-                component = time_block.components.add()
-                component.type = circuit_pb2.Component.GATE
-                component.gate.type = circuit_pb2.Gate.ARB
-                component.qubits[:] = [i]
-                component.gate.arb_params.xyz_axes.x.numeric = 0
-                component.gate.arb_params.xyz_axes.y.numeric = 0
-                component.gate.arb_params.xyz_axes.z.numeric = 1
-                component.gate.arb_params.rotation_angle.numeric = 2 * g * coeff
-                component.gate.arb_params.global_phase.numeric = 0
-
-    def quadratic_layer(g):
-        def cnot(i, j):
-            _, time_block = new_time_block()
-            component = time_block.components.add()
-            component.type = circuit_pb2.Component.GATE
-            component.gate.type = circuit_pb2.Gate.NOT
-            component.qubits[:] = [j]
-            component.controls_one[:] = [i]
-
-        for (i, j), coeff in quadratic_terms.items():
-            if coeff:
-                cnot(i, j)
-
-                _, time_block = new_time_block()
-                component = time_block.components.add()
-                component.type = circuit_pb2.Component.GATE
-                component.gate.type = circuit_pb2.Gate.ARB
-                component.qubits[:] = [j]
-                component.gate.arb_params.xyz_axes.x.numeric = 0
-                component.gate.arb_params.xyz_axes.y.numeric = 0
-                component.gate.arb_params.xyz_axes.z.numeric = 1
-                component.gate.arb_params.rotation_angle.numeric = 2 * g * coeff
-                component.gate.arb_params.global_phase.numeric = 0
-
-                cnot(i, j)
-
-    def x_layer(b):
-        _, x_time_block = new_time_block()
-        for i in range(n):
-            component = x_time_block.components.add()
-            component.type = circuit_pb2.Component.GATE
-            component.gate.type = circuit_pb2.Gate.ARB
-            component.qubits[:] = [i]
-            component.gate.arb_params.xyz_axes.x.numeric = 1
-            component.gate.arb_params.xyz_axes.y.numeric = 0
-            component.gate.arb_params.xyz_axes.z.numeric = 0
-            component.gate.arb_params.rotation_angle.numeric = 2 * b
-            component.gate.arb_params.global_phase.numeric = 0
-
-    def new_qaoa_layer(p, b, g):
-        initial_tb_idx, _ = new_time_block()
-        linear_layer(g)
-        quadratic_layer(g)
-        x_layer(b)
-        final_tb_idx, _ = new_time_block()
-        new_time_block_group(f"p = {i}", initial_tb_idx, final_tb_idx)
-
-    for p, (b, g) in enumerate(zip(beta, gamma)):
-        new_qaoa_layer(p, b, g)
-
-    _, measurement_time_block = new_time_block()
-    for i in range(n):
-        component = measurement_time_block.components.add()
-        component.id = str(uuid.uuid4())
-        component.type = circuit_pb2.Component.GATE
-        component.gate.type = circuit_pb2.Gate.MEASURE
-        component.qubits[:] = [i]
-
-    return str(base64.b64encode(circuit.SerializeToString()), "utf-8")

@@ -16,7 +16,8 @@ import os
 
 # Custom Libraries
 import qaoa_vrp.build_graph
-import qaoa_vrp.graph_features
+import qaoa_vrp.features.graph_features
+import qaoa_vrp.features.tsp_features
 import qaoa_vrp.build_circuit
 import qaoa_vrp.clustering
 import qaoa_vrp.utils
@@ -24,9 +25,7 @@ from qaoa_vrp.exp_utils import str2bool, make_temp_directory
 from qaoa_vrp.quantum_burden import compute_quantum_burden
 
 
-def solve_qaoa(
-    i, qubo, p_max, threshold, n_max, mlflow_tracking, filename, raw_build=True
-):
+def solve_qaoa(i, qubo, p_max, n_max, backend, num_nodes, raw_build=True):
     """
     This function is used as input to the parellelisation in run_vrp_instance
     It obtains the exact and QAOA results and prints them, in parellel for each subtour
@@ -35,11 +34,9 @@ def solve_qaoa(
         i (int): the index of the parellel run
         qubo (object): qiskit qubo object
         p (int): the number of layers in the QAOA (p value)
-        mlflow_tracking (bool): Boolean to enable MlFlow tracking
     """
     evolution_data = []
     n = 0
-    n_run_probabilities = []
 
     while n < n_max:
         # Set p ticker
@@ -48,48 +45,25 @@ def solve_qaoa(
 
         points = list(2 * np.pi * np.random.random(2 * p))
 
-        prev_optimal_value = 100000
-        optimal_value = 1000
-
         while p <= p_max:
             t_start = time.time()
-            if n != 1:
-                prev_optimal_value = optimal_value
-
-            qaoa, circuit, params_expr = qaoa_vrp.build_circuit.qubo_to_qaoa(qubo, p)
-
-            qaoa_result, exact_result, offset = qaoa_vrp.build_circuit.solve_qubo_qaoa(
-                qubo, p, points
-            )
-
-            parameters = [
-                qaoa_result["optimal_parameters"][parameter]
-                for parameter in qaoa_result["optimal_parameters"]
-            ]
-            gammas = parameters[0::2]
-            betas = parameters[1::2]
 
             (
-                num_nodes,
-                linear_terms,
-                quadratic_terms,
-            ) = qaoa_vrp.build_circuit.to_hamiltonian_dicts(qubo)
+                qaoa_result,
+                exact_result,
+                offset,
+                num_qubits,
+            ) = qaoa_vrp.build_circuit.solve_qubo_qaoa(qubo, p, backend, points)
 
-            circuit_protobuf = qaoa_vrp.build_circuit.generate_circuit_pb(
-                num_nodes, linear_terms, quadratic_terms, gammas, betas
-            )
-
-            optimal_value = qaoa_result["optimal_value"] + offset
-
-            points = qaoa_vrp.build_circuit.interp_point(qaoa_result["optimal_point"])
-
-            optimal_value = qaoa_result["optimal_value"] + offset
-
-            print("Cluster QUBO {}:".format(i))
-            print("Optimal value: {}".format(optimal_value))
+            print(qaoa_result)
             print("Exact result (p={}): {}".format(p, exact_result.samples))
+
             probability, solution_data = qaoa_vrp.build_circuit.print_result(
-                qubo, qaoa_result, circuit.num_qubits, exact_result.samples[0][1]
+                qubo,
+                qaoa_result,
+                num_qubits,
+                exact_result.samples[0][1],
+                backend,
             )
 
             if num_nodes > 1:
@@ -102,7 +76,6 @@ def solve_qaoa(
                 evolution_p_data = {
                     "p": p,
                     "state": solution_data,
-                    "circuitB4": circuit_protobuf,
                     "probability_success": p_success,
                 }
                 # Attach evolution step
@@ -119,7 +92,7 @@ def solve_qaoa(
     return evolution_data
 
 
-def run_vrp_instance(filename, mlflow_tracking, raw_build=True):
+def run_vrp_instance(filename, backend, mlflow_tracking, raw_build=True):
     """
     This function runs a VRP instance from end to end
     e.g loads in graph json file, converts to networkx
@@ -171,13 +144,16 @@ def run_vrp_instance(filename, mlflow_tracking, raw_build=True):
         mlflow.set_tracking_uri(params["experiment"]["tracking-uri"])
         mlflow.set_experiment(params["experiment"]["name"])
 
-        # Build Feature Vector
-        feature_vector = qaoa_vrp.graph_features.get_graph_features(G)
+        # Build Graph Feature Vector
+        feature_vector = qaoa_vrp.features.graph_features.get_graph_features(G)
+        # Build TSP Feature Vector
+        tsp_feature_vector = qaoa_vrp.features.tsp_features.get_tsp_features(G)
         # Add num vehicles
         feature_vector["num_vehicles"] = num_vehicles
 
         # Log Params
         mlflow.log_params(feature_vector)
+        mlflow.log_params(tsp_feature_vector)
         mlflow.log_params(qaoa_dict)
         mlflow.log_param("source", instance_type)
         mlflow.log_param("instance_uuid", filename)
@@ -222,13 +198,14 @@ def run_vrp_instance(filename, mlflow_tracking, raw_build=True):
             for index, node in enumerate(cluster_mapping)
             if node == i + 1 or node == 0
         ]
+        num_nodes = len(single_qubo_solution_data["cluster"])
         single_qubo_solution_data["evolution"] = solve_qaoa(
-            i, qubo, p_max, threshold, n_max, mlflow_tracking, filename
+            i, qubo, p_max, n_max, backend, num_nodes
         )
 
         # Solution data for QUBO stuff
         qubos_solution_data.append(single_qubo_solution_data)
-    
+
     # Compute quantum burden
     quantum_burden = compute_quantum_burden(qubos_solution_data)
 
@@ -273,6 +250,14 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "-b",
+        "--backend",
+        type=str,
+        default="matrix_product_state",
+        help="The backend used for the optimisation (Currently either 'statevector_simulator' or 'matrix_product_state",
+    )
+
+    parser.add_argument(
         "-T",
         "--track_mlflow",
         type=str2bool,
@@ -284,6 +269,6 @@ if __name__ == "__main__":
 
     args = vars(parser.parse_args())
     t1 = time.time()
-    run_vrp_instance(args["filename"], args["track_mlflow"])
+    run_vrp_instance(args["filename"], args["backend"], args["track_mlflow"])
     t2 = time.time()
     print("Result found in: {} seconds".format(round(t2 - t1, 3)))

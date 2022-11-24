@@ -6,7 +6,7 @@ printf "\n       \\               ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ �
 
 # Set variables
 export INSTANCE_DIRECTORY="data/*"
-export NodeMemory=4GB
+export NodeMemory=40GB
 
 # Build random instances
 # echo "♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥"

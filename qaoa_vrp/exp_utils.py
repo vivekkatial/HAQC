@@ -8,6 +8,14 @@ import argparse
 import contextlib
 import tempfile
 import shutil
+import re
+
+
+def to_snake_case(string):
+    string = (
+        re.sub(r'(?<=[a-z])(?=[A-Z])|[^a-zA-Z]', ' ', string).strip().replace(' ', '_')
+    )
+    return ''.join(string.lower())
 
 
 def str2bool(v):
@@ -30,7 +38,7 @@ def str2bool(v):
 
 @contextlib.contextmanager
 def make_temp_directory():
-    """Make temp directory """
+    """Make temp directory"""
     temp_dir = tempfile.mkdtemp()
     try:
         yield temp_dir
