@@ -1,6 +1,6 @@
-# HAQC -- Heuristic Algorithms for Quantum Computing Research Group
+# HAQC -- Heuristic Algorithms for Quantum Computing Research Group ![build](https://github.com/vivekkatial/HAQC/actions/workflows/build-container-and-release.yml/badge.svg)
 
-Research group to run optimisation algorithms on Quantum Computers at the University of Melbourne [![build]](https://github.com/vivekkatial/HAQC/actions/workflows/build-container-and-release.yml/badge.svg)
+Research group to run optimisation algorithms on Quantum Computers at the University of Melbourne 
 
 ## Getting Started
 
