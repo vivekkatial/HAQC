@@ -4,24 +4,24 @@ Research group to run optimisation algorithms on Quantum Computers at the Univer
 
 ## Getting Started
 
-Before getting started, ensure you have Python 3.7+. We use [pipenv](https://pipenv-fork.readthedocs.io/en/latest/) to manage the python environment (the .gitignore file should already ignore it).
+Before getting started, ensure you have Python 3.7+. We use [poetry](https://python-poetry.org/) to manage the python environment (the .gitignore file should already ignore it).
 
 ```{shell}
-$ pipenv install
+$ poetry install
 ```
 
 To add a package to your new project:
 
 ```{shell}
-$ pipenv install <package>
+$ poetry install <package>
 ```
 
-This will automatically edit your pipfile with the new package you provided.
+This will automatically edit your `pyproject.toml` file with the new package you provided.
 
-Next, activate the Pipenv shell:
+Next, activate the `poetry` shell:
 
 ```{shell}
-$ pipenv shell
+$ poetry shell
 $ python --version
 ```
 
