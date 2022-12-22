@@ -38,7 +38,7 @@ from qiskit.algorithms.optimizers import COBYLA, L_BFGS_B, SLSQP, SPSA, NELDER_M
 from qaoa_vrp.features.graph_features import *
 from qaoa_vrp.exp_utils import str2bool, make_temp_directory, to_snake_case
 from qaoa_vrp.generators.graph_instance import GraphInstance
-
+from qaoa_vrp.plot.draw_networks import draw_graph
 
 sns.set_theme()
 
@@ -47,13 +47,6 @@ import qiskit
 print(qiskit.__version__)
 
 
-def draw_graph(G, colors, pos):
-    default_axes = pylab.axes(frameon=True)
-    nx.draw_networkx(
-        G, node_color=colors, node_size=600, alpha=0.8, ax=default_axes, pos=pos
-    )
-    edge_labels = nx.get_edge_attributes(G, "weight")
-    nx.draw_networkx_edge_labels(G, pos=pos, edge_labels=edge_labels)
 
 
 def main(track_mlflow=False):
