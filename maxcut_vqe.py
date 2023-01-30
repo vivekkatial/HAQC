@@ -58,9 +58,9 @@ def main(track_mlflow=False):
     # Number of nodes
     N = 10
     # Max iterations
-    MAX_ITERATIONS = 10
+    MAX_ITERATIONS = 1000
     # Number of restarts
-    N_RESTARTS = 1
+    N_RESTARTS = 3
 
     # Generating a graph of erdos renyi graph
     G_unif = GraphInstance(nx.erdos_renyi_graph(N, p=0.5), "Uniform Random")
