@@ -25,9 +25,9 @@ import mlflow
 # Qiskit Imports
 from qiskit import Aer
 from qiskit.tools.visualization import plot_histogram
-from qiskit.circuit.library import TwoLocal
+from qiskit.circuit.library import TwoLocal, EfficientSU2
 from qiskit_optimization.applications import Maxcut, Tsp
-from qiskit.algorithms import VQE, NumPyMinimumEigensolver
+from qiskit.algorithms import VQE, NumPyMinimumEigensolver, QAOA
 from qiskit.algorithms.optimizers import SPSA
 from qiskit.utils import algorithm_globals, QuantumInstance
 from qiskit_optimization.algorithms import MinimumEigenOptimizer
@@ -47,8 +47,6 @@ import qiskit
 print(qiskit.__version__)
 
 
-
-
 def main(track_mlflow=False):
     if track_mlflow:
         # Configure MLFlow Stuff
@@ -60,9 +58,9 @@ def main(track_mlflow=False):
     # Number of nodes
     N = 10
     # Max iterations
-    MAX_ITERATIONS = 1000
+    MAX_ITERATIONS = 10
     # Number of restarts
-    N_RESTARTS = 3
+    N_RESTARTS = 1
 
     # Generating a graph of erdos renyi graph
     G_unif = GraphInstance(nx.erdos_renyi_graph(N, p=0.5), "Uniform Random")
@@ -201,151 +199,190 @@ def main(track_mlflow=False):
         colors = ["r" if x[i] == 0 else "c" for i in range(n)]
 
         ################################
-        # Quantum Run -- VQE
+        # Quantum Runs
         ################################
+        quantum_algorithms = ["VQE", "QAOA", "ESU2"]
+        for quant_alg in quantum_algorithms:
 
-        print(f"\n{'-'*10} Simulating Instance on Quantum using VQE {'-'*10}\n")
+            print(f"\n{'-'*10} Simulating Instance on Quantum using {quant_alg} {'-'*10}\n")
 
-        # Run optimisation code
-        optimizer = COBYLA(maxiter=MAX_ITERATIONS)
-        num_qubits = qubitOp.num_qubits
+            # Run optimisation code
+            optimizer = COBYLA(maxiter=MAX_ITERATIONS)
+            num_qubits = qubitOp.num_qubits
 
-        init_state = np.random.rand(num_qubits) * 2 * np.pi
-        print(f"The initial state is {init_state}")
-        optimizer_results = []
+            init_state = np.random.rand(num_qubits) * 2 * np.pi
+            print(f"The initial state is {init_state}")
+            optimizer_results = []
 
-        result = {"algo": None, "result": None}
+            result = {"algo": None, "result": None}
 
-        ## Setting parameters for a run (Simulator Backend etc)
-        algorithm_globals.random_seed = 12321
-        seed = 10598
-        backend = Aer.get_backend("aer_simulator_statevector")
-        quantum_instance = QuantumInstance(
-            backend, seed_simulator=seed, seed_transpiler=seed
-        )
+            ## Setting parameters for a run (Simulator Backend etc)
+            algorithm_globals.random_seed = 12321
+            seed = 10598
+            backend = Aer.get_backend("aer_simulator_statevector")
+            quantum_instance = QuantumInstance(
+                backend, seed_simulator=seed, seed_transpiler=seed
+            )
 
-        print(f"The initial state is {init_state}")
-        print(f"Testing Optimizer {i+1}: {type(optimizer).__name__}")
+            print(f"The initial state is {init_state}")
+            print(f"Testing Optimizer {i+1}: {type(optimizer).__name__}")
 
-        counts = []
-        values = []
+            counts = []
+            values = []
 
-        # Callback definition
-        def store_intermediate_result(eval_count, parameters, mean, std):
+            # Callback definition
+            def store_intermediate_result(eval_count, parameters, mean, std):
+                if track_mlflow:
+                    mlflow.log_metric(
+                        f"energy_{quant_alg}_{instance_type_logging}", mean
+                    )
+                if eval_count % 100 == 0:
+                    print(
+                        f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
+                    )
+                counts.append(eval_count)
+                values.append(mean)
+
+            for restart in range(N_RESTARTS):
+                print(f"Running Optimization at n_restart={restart}")
+                init_state = np.random.rand(4) * 2 * np.pi
+
+                if quant_alg == "VQE":
+                    # Define the systems of rotation for x and y
+                    ry = TwoLocal(num_qubits, "ry", "cz", reps=2, entanglement="linear")
+
+                    # VQE definition
+                    vqe = VQE(
+                        ry,
+                        optimizer=optimizer,
+                        quantum_instance=quantum_instance,
+                        callback=store_intermediate_result,
+                    )
+                    algo_result = vqe.compute_minimum_eigenvalue(qubitOp)
+
+                elif quant_alg == "QAOA":
+                    p = 10
+                    qaoa = QAOA(
+                        optimizer=optimizer, 
+                        reps=p,
+                        initial_point=list(2 * np.pi * np.random.random(2 * p)), 
+                        callback=store_intermediate_result, 
+                        quantum_instance=quantum_instance
+                    )
+                    algo_result = qaoa.compute_minimum_eigenvalue(qubitOp)
+                elif quant_alg == "F-VQE":
+                    # Use RY ansatz
+                    esu2 = EfficientSU2(num_qubits=num_qubits)
+                    vqe = VQE(
+                        esu2,
+                        optimizer=optimizer,
+                        quantum_instance=quantum_instance,
+                        callback=store_intermediate_result,
+                    )
+                    algo_result = vqe.compute_minimum_eigenvalue(qubitOp)
+
+                else:
+                    return False
+
+            # Convergence array
+            total_counts = np.arange(0, len(counts))
+            values = np.asarray(values)
+
+            print(f"\n{'-'*10} Optimization Complete {'-'*10}\n")
+
+            pylab.rcParams["figure.figsize"] = (12, 8)
+            pylab.plot(total_counts, values, label=type(optimizer).__name__)
+            pylab.xlabel("Eval count")
+            pylab.ylabel("Energy")
+            pylab.title("Energy convergence for various optimizers")
+            pylab.legend(loc="upper right")
+
+            # Sample most liklely eigenstate
+            x = max_cut.sample_most_likely(algo_result.eigenstate)
+            # Energy Gap = E_{g} / E_{opt}
+            energy_gap = (
+                1 - algo_result.eigenvalue.real / optimal_result.eigenvalue.real
+            )
+            print("Final energy:", algo_result.eigenvalue.real)
+            print("time:", algo_result.optimizer_time)
+            print("max-cut objective:", algo_result.eigenvalue.real + offset)
+            print("solution:", x)
+            print("solution objective:", qp.objective.evaluate(x))
+            print("energy_gap:", energy_gap)
+
             if track_mlflow:
-                mlflow.log_metric(f"energy_{instance_type_logging}", mean)
-            if eval_count % 100 == 0:
                 print(
-                    f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
+                    f"\n{'-'*50}\n Logging Results for {instance_type_logging}\n{'-'*50}\n"
                 )
-            counts.append(eval_count)
-            values.append(mean)
+                mlflow.log_metric(
+                    f"energy_gap_{quant_alg}_{instance_type_logging}", energy_gap
+                )
+                mlflow.log_metric(
+                    f"final_energy_{quant_alg}_{instance_type_logging}",
+                    algo_result.eigenvalue.real,
+                )
+                mlflow.log_metric(
+                    f"maxcut_objective_{quant_alg}_{instance_type_logging}",
+                    algo_result.eigenvalue.real + offset,
+                )
+                mlflow.log_metric(
+                    f"solution_objective_{quant_alg}_{instance_type_logging}",
+                    qp.objective.evaluate(x),
+                )
 
-        for restart in range(N_RESTARTS):
-            print(f"Running Optimization at n_restart={restart}")
-            init_state = np.random.rand(4) * 2 * np.pi
-
-            # Define the systems of rotation for x and y
-            ry = TwoLocal(num_qubits, "ry", "cz", reps=2, entanglement="linear")
-
-            # VQE definition
-            vqe = VQE(
-                ry,
-                optimizer=optimizer,
-                quantum_instance=quantum_instance,
-                callback=store_intermediate_result,
-            )
-            algo_result = vqe.compute_minimum_eigenvalue(qubitOp)
-
-        # Convergence array
-        total_counts = np.arange(0, len(counts))
-        values = np.asarray(values)
-
-        print(f"\n{'-'*10} Optimization Complete {'-'*10}\n")
-
-        pylab.rcParams["figure.figsize"] = (12, 8)
-        pylab.plot(total_counts, values, label=type(optimizer).__name__)
-        pylab.xlabel("Eval count")
-        pylab.ylabel("Energy")
-        pylab.title("Energy convergence for various optimizers")
-        pylab.legend(loc="upper right")
-
-        # Sample most liklely eigenstate
-        x = max_cut.sample_most_likely(algo_result.eigenstate)
-        # Energy Gap = E_{g} / E_{opt}
-        energy_gap = 1 - algo_result.eigenvalue.real / optimal_result.eigenvalue.real
-        print("Final energy:", algo_result.eigenvalue.real)
-        print("time:", algo_result.optimizer_time)
-        print("max-cut objective:", algo_result.eigenvalue.real + offset)
-        print("solution:", x)
-        print("solution objective:", qp.objective.evaluate(x))
-        print("energy_gap:", energy_gap)
-
-        if track_mlflow:
-            print(
-                f"\n{'-'*50}\n Logging Results for {instance_type_logging}\n{'-'*50}\n"
-            )
-            mlflow.log_metric(f"energy_gap_{instance_type_logging}", energy_gap)
-            mlflow.log_metric(
-                f"final_energy_{instance_type_logging}", algo_result.eigenvalue.real
-            )
-            mlflow.log_metric(
-                f"maxcut_objective_{instance_type_logging}",
-                algo_result.eigenvalue.real + offset,
-            )
-            mlflow.log_metric(
-                f"solution_objective_{instance_type_logging}", qp.objective.evaluate(x)
-            )
-
-            with make_temp_directory() as temp_dir:
-                # Plot Network Graph
-                pylab.clf()
-                graph_plot_fn = f"network_plot_{instance_type_logging}.png"
-                graph_plot_fn = os.path.join(temp_dir, graph_plot_fn)
-                colors = ["r" if x[i] == 0 else "c" for i in range(n)]
-                try:
-                    if graph_instance.graph_type == "Nearly Complete BiPartite":
-                        pos = {}
-                        bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(G)
-                        bottom_nodes = list(bottom_nodes)
-                        top_nodes = list(top_nodes)
-                        pos.update(
-                            (i, (i - bottom_nodes[-1] / 2, 1))
-                            for i in range(bottom_nodes[-1])
-                        )
-                        pos.update(
-                            (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
-                            for i in range(
-                                bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1]
+                with make_temp_directory() as temp_dir:
+                    # Plot Network Graph
+                    pylab.clf()
+                    graph_plot_fn = (
+                        f"network_plot_{quant_alg}_{instance_type_logging}.png"
+                    )
+                    graph_plot_fn = os.path.join(temp_dir, graph_plot_fn)
+                    colors = ["r" if x[i] == 0 else "c" for i in range(n)]
+                    try:
+                        if graph_instance.graph_type == "Nearly Complete BiPartite":
+                            pos = {}
+                            bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(G)
+                            bottom_nodes = list(bottom_nodes)
+                            top_nodes = list(top_nodes)
+                            pos.update(
+                                (i, (i - bottom_nodes[-1] / 2, 1))
+                                for i in range(bottom_nodes[-1])
                             )
-                        )
-                        draw_graph(G, colors, pos)
-                        pylab.savefig(graph_plot_fn)
-                        mlflow.log_artifact(graph_plot_fn)
-                    else:
+                            pos.update(
+                                (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
+                                for i in range(
+                                    bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1]
+                                )
+                            )
+                            draw_graph(G, colors, pos)
+                            pylab.savefig(graph_plot_fn)
+                            mlflow.log_artifact(graph_plot_fn)
+                        else:
+                            pos = nx.spring_layout(G)
+                            draw_graph(G, colors, pos)
+                            pylab.savefig(graph_plot_fn)
+                            mlflow.log_artifact(graph_plot_fn)
+                    except:
                         pos = nx.spring_layout(G)
                         draw_graph(G, colors, pos)
                         pylab.savefig(graph_plot_fn)
                         mlflow.log_artifact(graph_plot_fn)
-                except:
-                    pos = nx.spring_layout(G)
-                    draw_graph(G, colors, pos)
-                    pylab.savefig(graph_plot_fn)
-                    mlflow.log_artifact(graph_plot_fn)
 
-                # Plot convergence
-                convergence_plot_fn = f"convergence_plot_{instance_type_logging}.png"
-                convergence_plot_fn = os.path.join(temp_dir, convergence_plot_fn)
-                pylab.clf()
-                pylab.rcParams["figure.figsize"] = (12, 8)
-                pylab.plot(total_counts, values, label=type(optimizer).__name__)
-                pylab.xlabel("Eval count")
-                pylab.ylabel("Energy")
-                pylab.title("Energy convergence for various optimizers")
-                pylab.legend(loc="upper right")
-                pylab.savefig(convergence_plot_fn)
-                pylab.axhline(y=algo_result.eigenvalue.real, ls="--", c="red")
-                mlflow.log_artifact(convergence_plot_fn)
+                    # Plot convergence
+                    convergence_plot_fn = (
+                        f"convergence_plot_{quant_alg}_{instance_type_logging}.png"
+                    )
+                    convergence_plot_fn = os.path.join(temp_dir, convergence_plot_fn)
+                    pylab.clf()
+                    pylab.rcParams["figure.figsize"] = (12, 8)
+                    pylab.plot(total_counts, values, label=type(optimizer).__name__)
+                    pylab.xlabel("Eval count")
+                    pylab.ylabel("Energy")
+                    pylab.title("Energy convergence for various optimizers")
+                    pylab.legend(loc="upper right")
+                    pylab.savefig(convergence_plot_fn)
+                    pylab.axhline(y=algo_result.eigenvalue.real, ls="--", c="red")
+                    mlflow.log_artifact(convergence_plot_fn)
 
     print(f"\n{'-'*50}\n{'-'*50}\n{' '*18} Run Complete \n{'-'*50}\n{'-'*50}\n")
 
