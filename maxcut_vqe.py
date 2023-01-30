@@ -270,7 +270,7 @@ def main(track_mlflow=False):
                         quantum_instance=quantum_instance
                     )
                     algo_result = qaoa.compute_minimum_eigenvalue(qubitOp)
-                elif quant_alg == "F-VQE":
+                elif quant_alg == "ESU2":
                     # Use RY ansatz
                     esu2 = EfficientSU2(num_qubits=num_qubits)
                     vqe = VQE(
