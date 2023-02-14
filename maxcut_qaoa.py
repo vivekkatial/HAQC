@@ -72,19 +72,27 @@ def main(track_mlflow=False):
     N_RESTARTS = 3
 
     for instance_size in range(MIN_N, MAX_N + 1):
-        print("Running job on instance size of N={instance_size}")
         N = instance_size
-
+        print("Running job on instance size of N={instance_size}")
+        G_instances = []
         # Generating a graph of erdos renyi graph
         G_unif = GraphInstance(nx.erdos_renyi_graph(N, p=0.5), "Uniform Random")
+        G_instances.append(G_unif)
+
+        # Power-Law Tree
         G_pl_tree = GraphInstance(
             nx.random_powerlaw_tree(N, gamma=3, seed=None, tries=1000), "Power Law Tree"
         )
+        G_instances.append(G_pl_tree)
+
+        # Wattz-Strogatz Graph
         G_wattz = GraphInstance(
             nx.connected_watts_strogatz_graph(N, k=4, p=0.5),
             "Watts-Strogatz small world",
         )
+        G_instances.append(G_wattz)
 
+        # Geometric Graphs
         connected = False
         geom_guess = 0
         while connected is False:
@@ -98,6 +106,7 @@ def main(track_mlflow=False):
             )
 
         G_geom = GraphInstance(g_geom, "Geometric")
+        G_instances.append(G_geom)
 
         # Create a nearly compelte bi partite graph
         # Randomly generate the size of one partiton
@@ -107,13 +116,20 @@ def main(track_mlflow=False):
             nx.complete_bipartite_graph(n_part_1, n_part_2), "Nearly Complete BiPartite"
         )
         G_nc_bipart.nearly_complete()
+        G_instances.append(G_nc_bipart)
 
         # Create a 3-regular graph (based on https://arxiv.org/pdf/2106.10055.pdf)
-        G_three_regular = GraphInstance(
-            nx.random_regular_graph(d=3, n=N), graph_type="3-Regular Graph"
-        )
+        if instance_size % 2 == 0:
+            G_three_regular = GraphInstance(
+                nx.random_regular_graph(d=3, n=N), graph_type="3-Regular Graph"
+            )
+            G_instances.append(G_three_regular)
 
-        G_instances = [G_unif, G_pl_tree, G_wattz, G_nc_bipart, G_geom, G_three_regular]
+        # Create a 4-regular graph (based on https://arxiv.org/pdf/1908.08862.pdf)
+        G_four_regular = GraphInstance(
+            nx.random_regular_graph(d=4, n=N), graph_type="4-Regular Graph"
+        )
+        G_instances.append(G_four_regular)
 
         for i, graph_instance in enumerate(G_instances):
             print(
@@ -126,10 +142,9 @@ def main(track_mlflow=False):
             graph_features = get_graph_features(graph_instance.G)
             instance_type_logging = to_snake_case(graph_instance.graph_type)
             graph_features = {
-                instance_type_logging + "_" + str(key): val
+                f"{instance_type_logging}_{str(key)}_size_{instance_size}": val
                 for key, val in graph_features.items()
             }
-            print(json.dumps(graph_features, indent=4))
             if track_mlflow:
                 mlflow.log_params(graph_features)
             print(f"Solving Brute Force for {graph_instance.graph_type}\n{'-'*50}\n")
@@ -256,7 +271,9 @@ def main(track_mlflow=False):
             def store_intermediate_result(eval_count, parameters, mean, std):
                 if track_mlflow:
                     mlflow.log_metric(
-                        f"energy_{quant_alg}_{instance_type_logging}", mean
+                        f"energy_{quant_alg}_{instance_type_logging}",
+                        mean,
+                        step=len(counts),
                     )
                 if eval_count % 100 == 0:
                     print(
@@ -288,7 +305,7 @@ def main(track_mlflow=False):
                     graph_type=instance_type_logging,
                 )
                 print(json.dumps(logged_parameters, indent=3))
-                mlflow.log_parameters(logged_parameters)
+                mlflow.log_metrics(logged_parameters)
 
             print(f"\n{'-'*10} Optimization Complete {'-'*10}\n")
 
@@ -368,20 +385,27 @@ def main(track_mlflow=False):
                         draw_graph(G, colors, pos)
                         pylab.savefig(graph_plot_fn)
                         mlflow.log_artifact(graph_plot_fn)
+                    finally:
+                        print("Unable to load artifacts to MLFLOW")
 
                     # Plot convergence
-                    convergence_plot_fn = f"convergence_plot_{quant_alg}_{instance_type_logging}_{instance_size}.png"
-                    convergence_plot_fn = os.path.join(temp_dir, convergence_plot_fn)
-                    pylab.clf()
-                    pylab.rcParams["figure.figsize"] = (12, 8)
-                    pylab.plot(total_counts, values, label=type(optimizer).__name__)
-                    pylab.xlabel("Eval count")
-                    pylab.ylabel("Energy")
-                    pylab.title("Energy convergence for various optimizers")
-                    pylab.legend(loc="upper right")
-                    pylab.savefig(convergence_plot_fn)
-                    pylab.axhline(y=algo_result.eigenvalue.real, ls="--", c="red")
-                    mlflow.log_artifact(convergence_plot_fn)
+                    try:
+                        convergence_plot_fn = f"convergence_plot_{quant_alg}_{instance_type_logging}_{instance_size}.png"
+                        convergence_plot_fn = os.path.join(
+                            temp_dir, convergence_plot_fn
+                        )
+                        pylab.clf()
+                        pylab.rcParams["figure.figsize"] = (12, 8)
+                        pylab.plot(total_counts, values, label=type(optimizer).__name__)
+                        pylab.xlabel("Eval count")
+                        pylab.ylabel("Energy")
+                        pylab.title("Energy convergence for various optimizers")
+                        pylab.legend(loc="upper right")
+                        pylab.savefig(convergence_plot_fn)
+                        pylab.axhline(y=algo_result.eigenvalue.real, ls="--", c="red")
+                        mlflow.log_artifact(convergence_plot_fn)
+                    except:
+                        print("Unable to load artifact to MLFLOW")
 
     print(f"\n{'-'*50}\n{'-'*50}\n{' '*18} Run Complete \n{'-'*50}\n{'-'*50}\n")
 

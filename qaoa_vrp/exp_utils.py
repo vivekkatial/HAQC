@@ -12,6 +12,8 @@ import re
 
 
 def to_snake_case(string):
+    string = string.replace("3", "three")
+    string = string.replace("4", "four")
     string = (
         re.sub(r'(?<=[a-z])(?=[A-Z])|[^a-zA-Z]', ' ', string).strip().replace(' ', '_')
     )
