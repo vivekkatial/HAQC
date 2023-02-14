@@ -36,7 +36,12 @@ from qiskit.algorithms.optimizers import COBYLA, L_BFGS_B, SLSQP, SPSA, NELDER_M
 
 # Custom Imports
 from qaoa_vrp.features.graph_features import *
-from qaoa_vrp.exp_utils import str2bool, make_temp_directory, to_snake_case
+from qaoa_vrp.exp_utils import (
+    str2bool,
+    make_temp_directory,
+    to_snake_case,
+    clean_parameters_for_logging,
+)
 from qaoa_vrp.generators.graph_instance import GraphInstance
 from qaoa_vrp.plot.draw_networks import draw_graph
 
@@ -51,159 +56,174 @@ def main(track_mlflow=False):
     if track_mlflow:
         # Configure MLFlow Stuff
         tracking_uri = os.environ["MLFLOW_TRACKING_URI"]
-        experiment_name = "vqe-maxcut"
+        experiment_name = "QAOA-Parameter"
         mlflow.set_tracking_uri(tracking_uri)
         mlflow.set_experiment(experiment_name)
 
-    # Number of nodes
-    N = 10
+    # Max Number of nodes
+    MAX_N = 13
+    # Min number of nodes
+    MIN_N = 8
+    # Number of repeated layers QAOA
+    N_LAYERS = 3
     # Max iterations
-    MAX_ITERATIONS = 1000
+    MAX_ITERATIONS = 2000
     # Number of restarts
     N_RESTARTS = 3
 
-    # Generating a graph of erdos renyi graph
-    G_unif = GraphInstance(nx.erdos_renyi_graph(N, p=0.5), "Uniform Random")
-    G_pl_tree = GraphInstance(
-        nx.random_powerlaw_tree(N, gamma=3, seed=None, tries=1000), "Power Law Tree"
-    )
-    G_wattz = GraphInstance(
-        nx.connected_watts_strogatz_graph(N, k=4, p=0.5), "Watts-Strogatz small world"
-    )
+    for instance_size in range(MIN_N, MAX_N + 1):
+        print("Running job on instance size of N={instance_size}")
+        N = instance_size
 
-    connected = False
-    geom_guess = 0
-    while connected is False:
-        geom_guess += 1
-        # Use a radius that is connected 95% of the time
-        random_radius = random.uniform(0.24, np.sqrt(2))
-        g_geom = nx.random_geometric_graph(N, radius=random_radius)
-        connected = nx.algorithms.components.is_connected(g_geom)
-        print(
-            f"Guess {geom_guess} for producing a connected Geometric Graph with r={random_radius} - connected: {connected}"
+        # Generating a graph of erdos renyi graph
+        G_unif = GraphInstance(nx.erdos_renyi_graph(N, p=0.5), "Uniform Random")
+        G_pl_tree = GraphInstance(
+            nx.random_powerlaw_tree(N, gamma=3, seed=None, tries=1000), "Power Law Tree"
+        )
+        G_wattz = GraphInstance(
+            nx.connected_watts_strogatz_graph(N, k=4, p=0.5),
+            "Watts-Strogatz small world",
         )
 
-    G_geom = GraphInstance(g_geom, "Geometric")
+        connected = False
+        geom_guess = 0
+        while connected is False:
+            geom_guess += 1
+            # Use a radius that is connected 95% of the time
+            random_radius = random.uniform(0.24, np.sqrt(2))
+            g_geom = nx.random_geometric_graph(N, radius=random_radius)
+            connected = nx.algorithms.components.is_connected(g_geom)
+            print(
+                f"Guess {geom_guess} for producing a connected Geometric Graph with r={random_radius} - connected: {connected}"
+            )
 
-    # Create a nearly compelte bi partite graph
-    # Randomly generate the size of one partiton
-    n_part_1 = random.randint(1, N - 1)
-    n_part_2 = N - n_part_1
-    G_nc_bipart = GraphInstance(
-        nx.complete_bipartite_graph(n_part_1, n_part_2), "Nearly Complete BiPartite"
-    )
-    G_nc_bipart.nearly_complete()
+        G_geom = GraphInstance(g_geom, "Geometric")
 
-    # Create a 3-regular graph (based on https://arxiv.org/pdf/2106.10055.pdf)
-    G_three_regular = GraphInstance(
-        nx.random_regular_graph(d=3, n=N), graph_type="3-Regular Graph"
-    )
-
-    G_instances = [G_unif, G_pl_tree, G_wattz, G_nc_bipart, G_geom, G_three_regular]
-
-    for i, graph_instance in enumerate(G_instances):
-        print(
-            f"\n{'-'*50}\nRunning Experiment for {graph_instance.graph_type}\n{'-'*50}\n"
+        # Create a nearly compelte bi partite graph
+        # Randomly generate the size of one partiton
+        n_part_1 = random.randint(1, N - 1)
+        n_part_2 = N - n_part_1
+        G_nc_bipart = GraphInstance(
+            nx.complete_bipartite_graph(n_part_1, n_part_2), "Nearly Complete BiPartite"
         )
-        print(f"Instance Features for {graph_instance.graph_type}\n{'-'*50}\n")
-        # Show instance features
-        graph_features = get_graph_features(graph_instance.G)
-        instance_type_logging = to_snake_case(graph_instance.graph_type)
-        graph_features = {
-            instance_type_logging + "_" + str(key): val
-            for key, val in graph_features.items()
-        }
-        print(json.dumps(graph_features, indent=4))
-        if track_mlflow:
-            mlflow.log_params(graph_features)
-        print(f"Solving Brute Force for {graph_instance.graph_type}\n{'-'*50}\n")
-        G = graph_instance
+        G_nc_bipart.nearly_complete()
 
-        print(G)
-        G.allocate_random_weights()
-        G.compute_weight_matrix()
-        print(G.weight_matrix)
-        G = graph_instance.G
-        w = graph_instance.weight_matrix
-        n = len(G.nodes())
+        # Create a 3-regular graph (based on https://arxiv.org/pdf/2106.10055.pdf)
+        G_three_regular = GraphInstance(
+            nx.random_regular_graph(d=3, n=N), graph_type="3-Regular Graph"
+        )
 
-        best_cost_brute = 0
-        for b in range(2**n):
-            x = [int(t) for t in reversed(list(bin(b)[2:].zfill(n)))]
-            cost = 0
-            for i in range(n):
-                for j in range(n):
-                    cost = cost + w[i, j] * x[i] * (1 - x[j])
-            if best_cost_brute < cost:
-                best_cost_brute = cost
-                xbest_brute = x
+        G_instances = [G_unif, G_pl_tree, G_wattz, G_nc_bipart, G_geom, G_three_regular]
 
-        colors = ["r" if xbest_brute[i] == 0 else "c" for i in range(n)]
-        try:
-            if graph_instance.graph_type == "Nearly Complete BiPartite":
-                pos = {}
-                bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(G)
-                bottom_nodes = list(bottom_nodes)
-                top_nodes = list(top_nodes)
-                pos.update(
-                    (i, (i - bottom_nodes[-1] / 2, 1)) for i in range(bottom_nodes[-1])
-                )
-                pos.update(
-                    (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
-                    for i in range(bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1])
-                )
+        for i, graph_instance in enumerate(G_instances):
+            print(
+                f"\n{'-'*50}\nRunning Experiment for {graph_instance.graph_type} of size {instance_size}\n{'-'*50}\n"
+            )
+            print(
+                f"Instance Features for {graph_instance.graph_type} of size {instance_size}\n{'-'*50}\n"
+            )
+            # Show instance features
+            graph_features = get_graph_features(graph_instance.G)
+            instance_type_logging = to_snake_case(graph_instance.graph_type)
+            graph_features = {
+                instance_type_logging + "_" + str(key): val
+                for key, val in graph_features.items()
+            }
+            print(json.dumps(graph_features, indent=4))
+            if track_mlflow:
+                mlflow.log_params(graph_features)
+            print(f"Solving Brute Force for {graph_instance.graph_type}\n{'-'*50}\n")
+            G = graph_instance
+
+            print(G)
+            G.allocate_random_weights()
+            G.compute_weight_matrix()
+            print(G.weight_matrix)
+            G = graph_instance.G
+            w = graph_instance.weight_matrix
+            n = len(G.nodes())
+
+            best_cost_brute = 0
+            for b in range(2**n):
+                x = [int(t) for t in reversed(list(bin(b)[2:].zfill(n)))]
+                cost = 0
+                for i in range(n):
+                    for j in range(n):
+                        cost = cost + w[i, j] * x[i] * (1 - x[j])
+                if best_cost_brute < cost:
+                    best_cost_brute = cost
+                    xbest_brute = x
+
+            colors = ["r" if xbest_brute[i] == 0 else "c" for i in range(n)]
+            try:
+                if graph_instance.graph_type == "Nearly Complete BiPartite":
+                    pos = {}
+                    bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(G)
+                    bottom_nodes = list(bottom_nodes)
+                    top_nodes = list(top_nodes)
+                    pos.update(
+                        (i, (i - bottom_nodes[-1] / 2, 1))
+                        for i in range(bottom_nodes[-1])
+                    )
+                    pos.update(
+                        (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
+                        for i in range(
+                            bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1]
+                        )
+                    )
+                    draw_graph(G, colors, pos)
+            except:
+                pos = nx.spring_layout(G)
                 draw_graph(G, colors, pos)
-        except:
-            pos = nx.spring_layout(G)
-            draw_graph(G, colors, pos)
-        print(
-            "\nBest solution = " + str(xbest_brute) + " cost = " + str(best_cost_brute)
-        )
+            print(
+                "\nBest solution = "
+                + str(xbest_brute)
+                + " cost = "
+                + str(best_cost_brute)
+            )
 
-        max_cut = Maxcut(graph_instance.weight_matrix)
-        qp = max_cut.to_quadratic_program()
-        print(qp.prettyprint())
+            max_cut = Maxcut(graph_instance.weight_matrix)
+            qp = max_cut.to_quadratic_program()
+            print(qp.prettyprint())
 
-        qubitOp, offset = qp.to_ising()
-        print("Offset:", offset)
-        print("Ising Hamiltonian:")
-        print(str(qubitOp))
+            qubitOp, offset = qp.to_ising()
+            print("Offset:", offset)
+            print("Ising Hamiltonian:")
+            print(str(qubitOp))
 
-        # solving Quadratic Program using exact classical eigensolver
-        exact = MinimumEigenOptimizer(NumPyMinimumEigensolver())
-        result = exact.solve(qp)
-        print(result.prettyprint())
-        print(
-            "\nBest solution BRUTE FORCE = "
-            + str(xbest_brute)
-            + " cost = "
-            + str(best_cost_brute)
-        )
+            # solving Quadratic Program using exact classical eigensolver
+            exact = MinimumEigenOptimizer(NumPyMinimumEigensolver())
+            result = exact.solve(qp)
+            print(result.prettyprint())
+            print(
+                "\nBest solution BRUTE FORCE = "
+                + str(xbest_brute)
+                + " cost = "
+                + str(best_cost_brute)
+            )
 
-        # Check that the Hamiltonian gives the right cost
-        print(
-            f"\n{'-'*10} Checking that current Hamiltonian gives right cost {'-'*10}\n"
-        )
+            # Check that the Hamiltonian gives the right cost
+            print(
+                f"\n{'-'*10} Checking that current Hamiltonian gives right cost {'-'*10}\n"
+            )
 
-        ee = NumPyMinimumEigensolver()
+            ee = NumPyMinimumEigensolver()
 
-        # Calculate the min eigenvalue
-        optimal_result = ee.compute_minimum_eigenvalue(qubitOp)
+            # Calculate the min eigenvalue
+            optimal_result = ee.compute_minimum_eigenvalue(qubitOp)
 
-        ground_state = max_cut.sample_most_likely(optimal_result.eigenstate)
-        print("ground state energy:", optimal_result.eigenvalue.real)
-        print("optimal max-cut objective:", optimal_result.eigenvalue.real + offset)
-        print("ground state solution:", ground_state)
-        print("ground state objective:", qp.objective.evaluate(x))
+            ground_state = max_cut.sample_most_likely(optimal_result.eigenstate)
+            print("ground state energy:", optimal_result.eigenvalue.real)
+            print("optimal max-cut objective:", optimal_result.eigenvalue.real + offset)
+            print("ground state solution:", ground_state)
+            print("ground state objective:", qp.objective.evaluate(x))
 
-        colors = ["r" if x[i] == 0 else "c" for i in range(n)]
+            colors = ["r" if x[i] == 0 else "c" for i in range(n)]
 
-        ################################
-        # Quantum Runs
-        ################################
-        quantum_algorithms = ["VQE", "QAOA", "ESU2"]
-        for quant_alg in quantum_algorithms:
-
+            ################################
+            # Quantum Runs
+            ################################
+            quant_alg = "QAOA"
             print(
                 f"\n{'-'*10} Simulating Instance on Quantum using {quant_alg} {'-'*10}\n"
             )
@@ -249,46 +269,26 @@ def main(track_mlflow=False):
                 print(f"Running Optimization at n_restart={restart}")
                 init_state = np.random.rand(4) * 2 * np.pi
 
-                if quant_alg == "VQE":
-                    # Define the systems of rotation for x and y
-                    ry = TwoLocal(num_qubits, "ry", "cz", reps=2, entanglement="linear")
-
-                    # VQE definition
-                    vqe = VQE(
-                        ry,
-                        optimizer=optimizer,
-                        quantum_instance=quantum_instance,
-                        callback=store_intermediate_result,
-                    )
-                    algo_result = vqe.compute_minimum_eigenvalue(qubitOp)
-
-                elif quant_alg == "QAOA":
-                    p = 10
-                    qaoa = QAOA(
-                        optimizer=optimizer,
-                        reps=p,
-                        initial_point=list(2 * np.pi * np.random.random(2 * p)),
-                        callback=store_intermediate_result,
-                        quantum_instance=quantum_instance,
-                    )
-                    algo_result = qaoa.compute_minimum_eigenvalue(qubitOp)
-                elif quant_alg == "ESU2":
-                    # Use RY ansatz
-                    esu2 = EfficientSU2(num_qubits=num_qubits)
-                    vqe = VQE(
-                        esu2,
-                        optimizer=optimizer,
-                        quantum_instance=quantum_instance,
-                        callback=store_intermediate_result,
-                    )
-                    algo_result = vqe.compute_minimum_eigenvalue(qubitOp)
-
-                else:
-                    return False
-
+                qaoa = QAOA(
+                    optimizer=optimizer,
+                    reps=N_LAYERS,
+                    initial_point=list(2 * np.pi * np.random.random(2 * N_LAYERS)),
+                    callback=store_intermediate_result,
+                    quantum_instance=quantum_instance,
+                )
+                algo_result = qaoa.compute_minimum_eigenvalue(qubitOp)
             # Convergence array
             total_counts = np.arange(0, len(counts))
             values = np.asarray(values)
+
+            if track_mlflow:
+                logged_parameters = clean_parameters_for_logging(
+                    algo_result=algo_result,
+                    instance_size=instance_size,
+                    graph_type=instance_type_logging,
+                )
+                print(json.dumps(logged_parameters, indent=3))
+                mlflow.log_parameters(logged_parameters)
 
             print(f"\n{'-'*10} Optimization Complete {'-'*10}\n")
 
@@ -314,30 +314,29 @@ def main(track_mlflow=False):
 
             if track_mlflow:
                 print(
-                    f"\n{'-'*50}\n Logging Results for {instance_type_logging}\n{'-'*50}\n"
+                    f"\n{'-'*50}\n Logging Results for {instance_type_logging} of size {instance_size}\n{'-'*50}\n"
                 )
                 mlflow.log_metric(
-                    f"energy_gap_{quant_alg}_{instance_type_logging}", energy_gap
+                    f"energy_gap_{quant_alg}_{instance_type_logging}_{instance_size}",
+                    energy_gap,
                 )
                 mlflow.log_metric(
-                    f"final_energy_{quant_alg}_{instance_type_logging}",
+                    f"final_energy_{quant_alg}_{instance_type_logging}_{instance_size}",
                     algo_result.eigenvalue.real,
                 )
                 mlflow.log_metric(
-                    f"maxcut_objective_{quant_alg}_{instance_type_logging}",
+                    f"maxcut_objective_{quant_alg}_{instance_type_logging}_{instance_size}",
                     algo_result.eigenvalue.real + offset,
                 )
                 mlflow.log_metric(
-                    f"solution_objective_{quant_alg}_{instance_type_logging}",
+                    f"solution_objective_{quant_alg}_{instance_type_logging}_{instance_size}",
                     qp.objective.evaluate(x),
                 )
 
                 with make_temp_directory() as temp_dir:
                     # Plot Network Graph
                     pylab.clf()
-                    graph_plot_fn = (
-                        f"network_plot_{quant_alg}_{instance_type_logging}.png"
-                    )
+                    graph_plot_fn = f"network_plot_{quant_alg}_{instance_type_logging}_{instance_size}.png"
                     graph_plot_fn = os.path.join(temp_dir, graph_plot_fn)
                     colors = ["r" if x[i] == 0 else "c" for i in range(n)]
                     try:
@@ -371,9 +370,7 @@ def main(track_mlflow=False):
                         mlflow.log_artifact(graph_plot_fn)
 
                     # Plot convergence
-                    convergence_plot_fn = (
-                        f"convergence_plot_{quant_alg}_{instance_type_logging}.png"
-                    )
+                    convergence_plot_fn = f"convergence_plot_{quant_alg}_{instance_type_logging}_{instance_size}.png"
                     convergence_plot_fn = os.path.join(temp_dir, convergence_plot_fn)
                     pylab.clf()
                     pylab.rcParams["figure.figsize"] = (12, 8)

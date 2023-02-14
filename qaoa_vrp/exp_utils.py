@@ -44,3 +44,20 @@ def make_temp_directory():
         yield temp_dir
     finally:
         shutil.rmtree(temp_dir)
+
+
+def clean_parameters_for_logging(algo_result, instance_size, graph_type):
+    """Clean Algorithm result parameter from QAOA to log on MLFlow"""
+    params = algo_result.optimal_parameters
+    # Convert from ParameterVectorElement to simple string
+    cleaned_params = {k.name: v for k, v in params.items()}
+    # Replace greek with alpha-numeric
+    cleaned_params = {k.replace('β', 'beta'): v for k, v in cleaned_params.items()}
+    cleaned_params = {k.replace('γ', 'gamma'): v for k, v in cleaned_params.items()}
+    cleaned_params = {k.replace('[', '_'): v for k, v in cleaned_params.items()}
+    cleaned_params = {k.replace(']', ''): v for k, v in cleaned_params.items()}
+    cleaned_params = {
+        f"n_qubits_{instance_size}_instanceType_{graph_type}_{k}": v
+        for k, v in cleaned_params.items()
+    }
+    return cleaned_params

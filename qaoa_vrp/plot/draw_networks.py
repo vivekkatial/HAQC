@@ -1,6 +1,7 @@
 import pylab
 import networkx as nx
 
+
 def draw_graph(G, colors=None, pos=None):
     if colors is None:
         colors = ["r" for i in range(len(G))]

@@ -5,8 +5,6 @@ import numpy as np
 import networkx as nx
 
 
-
-
 def conver_bitstr_to_state(bitstr):
     """Convert bitstr to numpy array"""
     return np.array([float(i) for i in bitstr])
