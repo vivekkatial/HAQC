@@ -18,7 +18,10 @@ class GraphInstance:
     def allocate_random_weights(self):
         # Allocate random costs to the edges for now
         for (u, v) in self.G.edges():
-            self.G.edges[u, v]["weight"] = random.randint(0, 10)
+            if self.graph_type == "4-Regular Graph Fixed Weights":
+                self.G.edges[u, v]["weight"] = random.randint(-1, 1)
+            else:
+                self.G.edges[u, v]["weight"] = random.randint(0, 10)
 
     def compute_weight_matrix(self):
         G = self.G
