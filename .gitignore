@@ -133,3 +133,4 @@ data/*
 .aws/*
 .awshaqc/*
 haqc
+**.pickle
