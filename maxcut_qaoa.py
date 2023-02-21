@@ -255,7 +255,6 @@ def main(track_mlflow=False):
 
             init_state = np.random.rand(num_qubits) * 2 * np.pi
             print(f"The initial state is {init_state}")
-            optimizer_results = []
 
             result = {"algo": None, "result": None}
 
@@ -277,10 +276,16 @@ def main(track_mlflow=False):
             def store_intermediate_result(eval_count, parameters, mean, std):
                 if track_mlflow:
                     mlflow.log_metric(
-                        f"energy_{quant_alg}_{instance_type_logging}",
+                        f"energy_{quant_alg}_{instance_type_logging}_{instance_size}",
                         mean,
                         step=len(counts),
                     )
+                    mlflow.log_metric(
+                        f"min_energy_{quant_alg}_{instance_type_logging}_{instance_size}",
+                        optimal_result.eigenvalue.real,
+                        step=len(counts),
+                    )
+                    
                 if eval_count % 100 == 0:
                     print(
                         f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
