@@ -65,71 +65,71 @@ def main(track_mlflow=False):
     # Min number of nodes
     MIN_N = 8
     # Number of repeated layers QAOA
-    N_LAYERS = 3
+    N_LAYERS = 7
     # Max iterations
     MAX_ITERATIONS = 2000
     # Number of restarts
-    N_RESTARTS = 3
+    N_RESTARTS = 10
 
     for instance_size in range(MIN_N, MAX_N + 1):
         N = instance_size
         print(f"Running job on instance size of N={instance_size}")
         G_instances = []
         # Generating a graph of erdos renyi graph
-        # G_unif = GraphInstance(nx.erdos_renyi_graph(N, p=0.5), "Uniform Random")
-        # G_instances.append(G_unif)
+        G_unif = GraphInstance(nx.erdos_renyi_graph(N, p=0.5), "Uniform Random")
+        G_instances.append(G_unif)
 
         # Power-Law Tree
-        # G_pl_tree = GraphInstance(
-        #     nx.random_powerlaw_tree(N, gamma=3, seed=None, tries=1000), "Power Law Tree"
-        # )
-        # G_instances.append(G_pl_tree)
+        G_pl_tree = GraphInstance(
+            nx.random_powerlaw_tree(N, gamma=3, seed=None, tries=1000), "Power Law Tree"
+        )
+        G_instances.append(G_pl_tree)
 
-        # # Wattz-Strogatz Graph
-        # G_wattz = GraphInstance(
-        #     nx.connected_watts_strogatz_graph(N, k=4, p=0.5),
-        #     "Watts-Strogatz small world",
-        # )
-        # G_instances.append(G_wattz)
+        # Wattz-Strogatz Graph
+        G_wattz = GraphInstance(
+            nx.connected_watts_strogatz_graph(N, k=4, p=0.5),
+            "Watts-Strogatz small world",
+        )
+        G_instances.append(G_wattz)
 
-        # # Geometric Graphs
-        # connected = False
-        # geom_guess = 0
-        # while connected is False:
-        #     geom_guess += 1
-        #     # Use a radius that is connected 95% of the time
-        #     random_radius = random.uniform(0.24, np.sqrt(2))
-        #     g_geom = nx.random_geometric_graph(N, radius=random_radius)
-        #     connected = nx.algorithms.components.is_connected(g_geom)
-        #     print(
-        #         f"Guess {geom_guess} for producing a connected Geometric Graph with r={random_radius} - connected: {connected}"
-        #     )
+        # Geometric Graphs
+        connected = False
+        geom_guess = 0
+        while connected is False:
+            geom_guess += 1
+            # Use a radius that is connected 95% of the time
+            random_radius = random.uniform(0.24, np.sqrt(2))
+            g_geom = nx.random_geometric_graph(N, radius=random_radius)
+            connected = nx.algorithms.components.is_connected(g_geom)
+            print(
+                f"Guess {geom_guess} for producing a connected Geometric Graph with r={random_radius} - connected: {connected}"
+            )
 
-        # G_geom = GraphInstance(g_geom, "Geometric")
-        # G_instances.append(G_geom)
+        G_geom = GraphInstance(g_geom, "Geometric")
+        G_instances.append(G_geom)
 
-        # # Create a nearly compelte bi partite graph
-        # # Randomly generate the size of one partiton
-        # n_part_1 = random.randint(1, N - 1)
-        # n_part_2 = N - n_part_1
-        # G_nc_bipart = GraphInstance(
-        #     nx.complete_bipartite_graph(n_part_1, n_part_2), "Nearly Complete BiPartite"
-        # )
-        # G_nc_bipart.nearly_complete()
-        # G_instances.append(G_nc_bipart)
+        # Create a nearly compelte bi partite graph
+        # Randomly generate the size of one partiton
+        n_part_1 = random.randint(1, N - 1)
+        n_part_2 = N - n_part_1
+        G_nc_bipart = GraphInstance(
+            nx.complete_bipartite_graph(n_part_1, n_part_2), "Nearly Complete BiPartite"
+        )
+        G_nc_bipart.nearly_complete()
+        G_instances.append(G_nc_bipart)
 
-        # # Create a 3-regular graph (based on https://arxiv.org/pdf/2106.10055.pdf)
-        # if instance_size % 2 == 0:
-        #     G_three_regular = GraphInstance(
-        #         nx.random_regular_graph(d=3, n=N), graph_type="3-Regular Graph"
-        #     )
-        #     G_instances.append(G_three_regular)
+        # Create a 3-regular graph (based on https://arxiv.org/pdf/2106.10055.pdf)
+        if instance_size % 2 == 0:
+            G_three_regular = GraphInstance(
+                nx.random_regular_graph(d=3, n=N), graph_type="3-Regular Graph"
+            )
+            G_instances.append(G_three_regular)
 
         # Create a 4-regular graph (based on https://arxiv.org/pdf/1908.08862.pdf)
-        # G_four_regular = GraphInstance(
-        #     nx.random_regular_graph(d=4, n=N), graph_type="4-Regular Graph"
-        # )
-        # G_instances.append(G_four_regular)
+        G_four_regular = GraphInstance(
+            nx.random_regular_graph(d=4, n=N), graph_type="4-Regular Graph"
+        )
+        G_instances.append(G_four_regular)
 
         # Create a 4-regular graph with costs (-1,0,1) (based on https://arxiv.org/pdf/1908.08862.pdf)
         G_four_regular_fixed_weights = GraphInstance(

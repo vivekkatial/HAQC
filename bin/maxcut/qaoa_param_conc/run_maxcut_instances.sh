@@ -20,7 +20,7 @@ export NodeMemory=40GB
 # echo "♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥"
 
 
-for i in {1..1000}
+for i in {1..100}
 do
    echo "Allocating node $NodeMemory memory for run number: $i"
    log_file="logs/qaoa_param_conc_maxcut_run_all_instance_$i.log"
