@@ -140,6 +140,19 @@ From: python:3.9.2
   # Run experiment
   python maxcut_qaoa.py -T True
 
+
+####################################################
+# APP TO RUN QAOA VANILLA INSTANCE
+####################################################
+%apphelp run_qaoa_maxcut_layers
+
+%applabels run_qaoa_maxcut_layers
+  APP_NAME QAOA_MAXCUT_LAYERS
+
+%apprun run_qaoa_maxcut_layers
+  # Run experiment
+  python maxcut_qaoa_layers.py -T True
+
 ####################################################
 # APP TO BUILD EXPERIMENTS
 ####################################################

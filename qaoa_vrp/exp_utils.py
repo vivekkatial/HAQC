@@ -48,7 +48,7 @@ def make_temp_directory():
         shutil.rmtree(temp_dir)
 
 
-def clean_parameters_for_logging(algo_result, instance_size, graph_type):
+def clean_parameters_for_logging(algo_result, **kwargs):
     """Clean Algorithm result parameter from QAOA to log on MLFlow"""
     params = algo_result.optimal_parameters
     # Convert from ParameterVectorElement to simple string
@@ -58,8 +58,10 @@ def clean_parameters_for_logging(algo_result, instance_size, graph_type):
     cleaned_params = {k.replace('γ', 'gamma'): v for k, v in cleaned_params.items()}
     cleaned_params = {k.replace('[', '_'): v for k, v in cleaned_params.items()}
     cleaned_params = {k.replace(']', ''): v for k, v in cleaned_params.items()}
-    cleaned_params = {
-        f"n_qubits_{instance_size}_instanceType_{graph_type}_{k}": v
-        for k, v in cleaned_params.items()
-    }
+
+    kwarg_str = ''
+    for key, value in kwargs.items():
+        kwarg_str += f'{key}_{str(value)}_'
+
+    cleaned_params = {f"{kwarg_str}_{k}": v for k, v in cleaned_params.items()}
     return cleaned_params

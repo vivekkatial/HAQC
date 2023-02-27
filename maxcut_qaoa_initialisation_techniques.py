@@ -11,7 +11,6 @@ import numpy as np
 import json
 import networkx as nx
 import random
-import copy
 import os
 
 # useful additional packages
@@ -24,15 +23,11 @@ import mlflow
 
 # Qiskit Imports
 from qiskit import Aer
-from qiskit.tools.visualization import plot_histogram
-from qiskit.circuit.library import TwoLocal, EfficientSU2
-from qiskit_optimization.applications import Maxcut, Tsp
-from qiskit.algorithms import VQE, NumPyMinimumEigensolver, QAOA
-from qiskit.algorithms.optimizers import SPSA
+from qiskit_optimization.applications import Maxcut
+from qiskit.algorithms import NumPyMinimumEigensolver, QAOA
 from qiskit.utils import algorithm_globals, QuantumInstance
 from qiskit_optimization.algorithms import MinimumEigenOptimizer
-from qiskit_optimization.problems import QuadraticProgram
-from qiskit.algorithms.optimizers import COBYLA, L_BFGS_B, SLSQP, SPSA, NELDER_MEAD
+from qiskit.algorithms.optimizers import COBYLA
 
 # Custom Imports
 from qaoa_vrp.features.graph_features import *
@@ -305,20 +300,18 @@ def main(track_mlflow=False):
                     quantum_instance=quantum_instance,
                 )
                 algo_result = qaoa.compute_minimum_eigenvalue(qubitOp)
-
-                if track_mlflow:
-                    logged_parameters = clean_parameters_for_logging(
-                        algo_result=algo_result,
-                        instance_size=instance_size,
-                        graph_type=instance_type_logging,
-                        restart=restart
-                    )
-                    print(json.dumps(logged_parameters, indent=3))
-                    mlflow.log_metrics(logged_parameters)
-
             # Convergence array
             total_counts = np.arange(0, len(counts))
             values = np.asarray(values)
+
+            if track_mlflow:
+                logged_parameters = clean_parameters_for_logging(
+                    algo_result=algo_result,
+                    instance_size=instance_size,
+                    graph_type=instance_type_logging,
+                )
+                print(json.dumps(logged_parameters, indent=3))
+                mlflow.log_metrics(logged_parameters)
 
             print(f"\n{'-'*10} Optimization Complete {'-'*10}\n")
 
