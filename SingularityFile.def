@@ -151,7 +151,7 @@ From: python:3.9.2
 
 %apprun run_qaoa_maxcut_layers
   # Run experiment
-  python maxcut_qaoa_layers.py -T True
+  python maxcut_qaoa_layers_vanilla.py -T True
 
 ####################################################
 # APP TO BUILD EXPERIMENTS
