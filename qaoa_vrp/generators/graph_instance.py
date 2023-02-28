@@ -178,6 +178,6 @@ def create_graphs_from_all_sources(instance_size=11, sources = "ALL"):
         G_instances.append(G_four_regular_fixed_weights)
 
         if sources != "ALL":
-            return [G_instances[0]]
+            return [G_instances[0],G_instances[1]]
         else:
             return G_instances

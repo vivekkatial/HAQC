@@ -47,27 +47,27 @@ def main(track_mlflow=False):
     if track_mlflow:
         # Configure MLFlow Stuff
         tracking_uri = os.environ["MLFLOW_TRACKING_URI"]
-        experiment_name = "QAOA-Parameter-layers"
+        experiment_name = "QAOA-Parameter-layers-vanilla"
         mlflow.set_tracking_uri(tracking_uri)
         mlflow.set_experiment(experiment_name)
 
     # Max Number of nodes
-    INSTANCE_SIZE = 12
+    INSTANCE_SIZE = 13
     # Number of repeated layers QAOA
     N_LAYERS = 10
     # Max iterations
-    MAX_ITERATIONS = 2000
+    MAX_ITERATIONS = 3000
     # Number of restarts
-    N_RESTARTS =6
+    N_RESTARTS = 5
+    instance_size = INSTANCE_SIZE
+    N = instance_size
+    print(f"Running job on instance size of N={instance_size} for upto {N_LAYERS}")
 
-    for n_layers in range(1, N_LAYERS+1):
-        instance_size = INSTANCE_SIZE
-        N = instance_size
-        print(f"Running job on instance size of N={instance_size} for {n_layers}")
+    # Generate all graph sources
+    G_instances = create_graphs_from_all_sources(instance_size=INSTANCE_SIZE, sources="-")
 
-        G_instances = create_graphs_from_all_sources(instance_size=N, sources="ALL")
-
-        for i, graph_instance in enumerate(G_instances):
+    for i, graph_instance in enumerate(G_instances):
+        with mlflow.start_run():
             print(
                 f"\n{'-'*50}\nRunning Experiment for {graph_instance.graph_type} of size {instance_size}\n{'-'*50}\n"
             )
@@ -77,8 +77,9 @@ def main(track_mlflow=False):
             # Show instance features
             graph_features = get_graph_features(graph_instance.G)
             instance_type_logging = to_snake_case(graph_instance.graph_type)
+            mlflow.log_param("Source", instance_type_logging)
             graph_features = {
-                f"{instance_type_logging}_{str(key)}_size_{instance_size}": val
+                f"{str(key)}_size_{instance_size}": val
                 for key, val in graph_features.items()
             }
             if track_mlflow:
@@ -174,182 +175,174 @@ def main(track_mlflow=False):
             ################################
             # Quantum Runs
             ################################
-            quant_alg = "QAOA"
-            print(
-                f"\n{'-'*10} Simulating Instance on Quantum using {quant_alg} {'-'*10}\n"
-            )
-
-            # Run optimisation code
-            optimizer = COBYLA(maxiter=MAX_ITERATIONS)
-            num_qubits = qubitOp.num_qubits
-
-            init_state = np.random.rand(num_qubits) * 2 * np.pi
-            print(f"The initial state is {init_state}")
-
-            result = {"algo": None, "result": None}
-
-            ## Setting parameters for a run (Simulator Backend etc)
-            algorithm_globals.random_seed = 12321
-            seed = 10598
-            backend = Aer.get_backend("aer_simulator_statevector")
-            quantum_instance = QuantumInstance(
-                backend, seed_simulator=seed, seed_transpiler=seed
-            )
-
-            print(f"The initial state is {init_state}")
-            print(f"Testing Optimizer {i+1}: {type(optimizer).__name__}")
-
-            counts = []
-            values = []
-
-            # Callback definition
-            def store_intermediate_result(eval_count, parameters, mean, std):
-                if track_mlflow:
-                    mlflow.log_metric(
-                        f"energy_{quant_alg}_{instance_type_logging}_{instance_size}_{n_layers}",
-                        mean,
-                        step=len(counts),
-                    )
-                    mlflow.log_metric(
-                        f"min_energy_{quant_alg}_{instance_type_logging}_{instance_size}__{n_layers}",
-                        optimal_result.eigenvalue.real,
-                        step=len(counts),
-                    )
-                    
-                if eval_count % 100 == 0:
-                    print(
-                        f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
-                    )
-                counts.append(eval_count)
-                values.append(mean)
-
-            for restart in range(N_RESTARTS):
-                print(f"Running Optimization at n_restart={restart}")
-                init_state = np.random.rand(4) * 2 * np.pi
-
-                qaoa = QAOA(
-                    optimizer=optimizer,
-                    reps=n_layers,
-                    initial_point=list(2 * np.pi * np.random.random(2 * n_layers)),
-                    callback=store_intermediate_result,
-                    quantum_instance=quantum_instance,
-                )
-                algo_result = qaoa.compute_minimum_eigenvalue(qubitOp)
-
-                logged_parameters = clean_parameters_for_logging(
-                    algo_result=algo_result,
-                    n_qubits=instance_size,
-                    instanceType=instance_type_logging,
-                    n_layers=n_layers,
-                    restart=restart
-                )
-                print(json.dumps(logged_parameters, indent=3))            
-                if track_mlflow:
-                    mlflow.log_metrics(logged_parameters)
-            
-                            # Convergence array
-            total_counts = np.arange(0, len(counts))
-            values = np.asarray(values)
-
-            print(f"\n{'-'*10} Optimization Complete {'-'*10}\n")
-
-            pylab.rcParams["figure.figsize"] = (12, 8)
-            pylab.plot(total_counts, values, label=type(optimizer).__name__)
-            pylab.xlabel("Eval count")
-            pylab.ylabel("Energy")
-            pylab.title("Energy convergence for various optimizers")
-            pylab.legend(loc="upper right")
-
-            # Sample most liklely eigenstate
-            x = max_cut.sample_most_likely(algo_result.eigenstate)
-            # Energy Gap = E_{g} / E_{opt}
-            energy_gap = (
-                1 - algo_result.eigenvalue.real / optimal_result.eigenvalue.real
-            )
-            print("Final energy:", algo_result.eigenvalue.real)
-            print("time:", algo_result.optimizer_time)
-            print("max-cut objective:", algo_result.eigenvalue.real + offset)
-            print("solution:", x)
-            print("solution objective:", qp.objective.evaluate(x))
-            print("energy_gap:", energy_gap)
-
-            if track_mlflow:
+            for n_layers in range(1, N_LAYERS+1):
+                quant_alg = "QAOA"
                 print(
-                    f"\n{'-'*50}\n Logging Results for {instance_type_logging} of size {instance_size}\n{'-'*50}\n"
-                )
-                mlflow.log_metric(
-                    f"energy_gap_{quant_alg}_{instance_type_logging}_{instance_size}",
-                    energy_gap,
-                )
-                mlflow.log_metric(
-                    f"final_energy_{quant_alg}_{instance_type_logging}_{instance_size}",
-                    algo_result.eigenvalue.real,
-                )
-                mlflow.log_metric(
-                    f"maxcut_objective_{quant_alg}_{instance_type_logging}_{instance_size}",
-                    algo_result.eigenvalue.real + offset,
-                )
-                mlflow.log_metric(
-                    f"solution_objective_{quant_alg}_{instance_type_logging}_{instance_size}",
-                    qp.objective.evaluate(x),
+                    f"\n{'-'*10} Simulating Instance on Quantum using {quant_alg} {'-'*10}\n"
                 )
 
-                with make_temp_directory() as temp_dir:
-                    # Plot Network Graph
-                    pylab.clf()
-                    graph_plot_fn = f"network_plot_{quant_alg}_{instance_type_logging}_{instance_size}.png"
-                    graph_plot_fn = os.path.join(temp_dir, graph_plot_fn)
-                    colors = ["r" if x[i] == 0 else "c" for i in range(n)]
-                    try:
-                        if graph_instance.graph_type == "Nearly Complete BiPartite":
-                            pos = {}
-                            bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(G)
-                            bottom_nodes = list(bottom_nodes)
-                            top_nodes = list(top_nodes)
-                            pos.update(
-                                (i, (i - bottom_nodes[-1] / 2, 1))
-                                for i in range(bottom_nodes[-1])
-                            )
-                            pos.update(
-                                (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
-                                for i in range(
-                                    bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1]
+                # Run optimisation code
+                optimizer = COBYLA(maxiter=MAX_ITERATIONS)
+                result = {"algo": None, "result": None}
+
+                ## Setting parameters for a run (Simulator Backend etc)
+                algorithm_globals.random_seed = 12321
+                seed = 10598
+                backend = Aer.get_backend("aer_simulator_statevector")
+                quantum_instance = QuantumInstance(
+                    backend, seed_simulator=seed, seed_transpiler=seed
+                )
+                print(f"Testing Optimizer {i+1}: {type(optimizer).__name__}")
+
+                counts = []
+                values = []
+
+                # Callback definition
+                def store_intermediate_result(eval_count, parameters, mean, std):
+                    if track_mlflow:
+                        mlflow.log_metric(
+                            f"energy_{quant_alg}_{instance_size}_{n_layers}",
+                            mean,
+                            step=len(counts),
+                        )
+                        mlflow.log_metric(
+                            f"min_energy_{quant_alg}_{instance_size}__{n_layers}",
+                            optimal_result.eigenvalue.real,
+                            step=len(counts),
+                        )
+                        
+                    if eval_count % 100 == 0:
+                        print(
+                            f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
+                        )
+                    counts.append(eval_count)
+                    values.append(mean)
+
+                for restart in range(N_RESTARTS):
+                    print(f"Running Optimization at n_restart={restart}")
+
+                    qaoa = QAOA(
+                        optimizer=optimizer,
+                        reps=n_layers,
+                        initial_point=list(2 * np.pi * np.random.random(2 * n_layers)),
+                        callback=store_intermediate_result,
+                        quantum_instance=quantum_instance,
+                    )
+                    algo_result = qaoa.compute_minimum_eigenvalue(qubitOp)
+
+                    logged_parameters = clean_parameters_for_logging(
+                        algo_result=algo_result,
+                        n_qubits=instance_size,
+                        n_layers=n_layers,
+                        restart=restart
+                    )
+                    print(json.dumps(logged_parameters, indent=3))
+                    if track_mlflow:
+                        mlflow.log_metrics(logged_parameters)
+                    
+                # Convergence array
+                total_counts = np.arange(0, len(counts))
+                values = np.asarray(values)
+
+                print(f"\n{'-'*10} Optimization Complete {'-'*10}\n")
+
+                pylab.rcParams["figure.figsize"] = (12, 8)
+                pylab.plot(total_counts, values, label=type(optimizer).__name__)
+                pylab.xlabel("Eval count")
+                pylab.ylabel("Energy")
+                pylab.title("Energy convergence for various optimizers")
+                pylab.legend(loc="upper right")
+
+                # Sample most liklely eigenstate
+                x = max_cut.sample_most_likely(algo_result.eigenstate)
+                # Energy Gap = E_{g} / E_{opt}
+                energy_gap = (
+                    1 - algo_result.eigenvalue.real / optimal_result.eigenvalue.real
+                )
+                print("Final energy:", algo_result.eigenvalue.real)
+                print("time:", algo_result.optimizer_time)
+                print("max-cut objective:", algo_result.eigenvalue.real + offset)
+                print("solution:", x)
+                print("solution objective:", qp.objective.evaluate(x))
+                print("energy_gap:", energy_gap)
+
+                if track_mlflow:
+                    print(
+                        f"\n{'-'*50}\n Logging Results for {instance_type_logging} of size {instance_size}\n{'-'*50}\n"
+                    )
+                    mlflow.log_metric(
+                        f"energy_gap_{quant_alg}_{instance_size}",
+                        energy_gap,
+                    )
+                    mlflow.log_metric(
+                        f"final_energy_{quant_alg}_{instance_size}",
+                        algo_result.eigenvalue.real,
+                    )
+                    mlflow.log_metric(
+                        f"maxcut_objective_{quant_alg}_{instance_size}",
+                        algo_result.eigenvalue.real + offset,
+                    )
+                    mlflow.log_metric(
+                        f"solution_objective_{quant_alg}_{instance_size}",
+                        qp.objective.evaluate(x),
+                    )
+
+                    with make_temp_directory() as temp_dir:
+                        # Plot Network Graph
+                        pylab.clf()
+                        graph_plot_fn = f"network_plot_{quant_alg}_{instance_size}.png"
+                        graph_plot_fn = os.path.join(temp_dir, graph_plot_fn)
+                        colors = ["r" if x[i] == 0 else "c" for i in range(n)]
+                        try:
+                            if graph_instance.graph_type == "Nearly Complete BiPartite":
+                                pos = {}
+                                bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(G)
+                                bottom_nodes = list(bottom_nodes)
+                                top_nodes = list(top_nodes)
+                                pos.update(
+                                    (i, (i - bottom_nodes[-1] / 2, 1))
+                                    for i in range(bottom_nodes[-1])
                                 )
-                            )
-                            draw_graph(G, colors, pos)
-                            pylab.savefig(graph_plot_fn)
-                            mlflow.log_artifact(graph_plot_fn)
-                        else:
+                                pos.update(
+                                    (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
+                                    for i in range(
+                                        bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1]
+                                    )
+                                )
+                                draw_graph(G, colors, pos)
+                                pylab.savefig(graph_plot_fn)
+                                mlflow.log_artifact(graph_plot_fn)
+                            else:
+                                pos = nx.spring_layout(G)
+                                draw_graph(G, colors, pos)
+                                pylab.savefig(graph_plot_fn)
+                                mlflow.log_artifact(graph_plot_fn)
+                        except:
                             pos = nx.spring_layout(G)
                             draw_graph(G, colors, pos)
                             pylab.savefig(graph_plot_fn)
                             mlflow.log_artifact(graph_plot_fn)
-                    except:
-                        pos = nx.spring_layout(G)
-                        draw_graph(G, colors, pos)
-                        pylab.savefig(graph_plot_fn)
-                        mlflow.log_artifact(graph_plot_fn)
-                    finally:
-                        print("Unable to load artifacts to MLFLOW")
+                        finally:
+                            print("Unable to load artifacts to MLFLOW")
 
-                    # Plot convergence
-                    try:
-                        convergence_plot_fn = f"convergence_plot_{quant_alg}_{instance_type_logging}_{instance_size}.png"
-                        convergence_plot_fn = os.path.join(
-                            temp_dir, convergence_plot_fn
-                        )
-                        pylab.clf()
-                        pylab.rcParams["figure.figsize"] = (12, 8)
-                        pylab.plot(total_counts, values, label=type(optimizer).__name__)
-                        pylab.axhline(y=algo_result.eigenvalue.real, ls="--", c="red")
-                        pylab.xlabel("Eval count")
-                        pylab.ylabel("Energy")
-                        pylab.title(f"Energy convergence for {instance_type_logging} -- p = {n_layers}")
-                        pylab.legend(loc="upper right")
-                        pylab.savefig(convergence_plot_fn)
-                        mlflow.log_artifact(convergence_plot_fn)
-                    except:
-                        print("Unable to load artifact to MLFLOW")
+                        # Plot convergence
+                        try:
+                            convergence_plot_fn = f"convergence_plot_{quant_alg}_layer_{n_layers}_{instance_size}.png"
+                            convergence_plot_fn = os.path.join(
+                                temp_dir, convergence_plot_fn
+                            )
+                            pylab.clf()
+                            pylab.rcParams["figure.figsize"] = (12, 8)
+                            pylab.plot(total_counts, values, label=type(optimizer).__name__)
+                            pylab.axhline(y=optimal_result.eigenvalue.real, ls="--", c="red")
+                            pylab.xlabel("Eval count")
+                            pylab.ylabel("Energy")
+                            pylab.title(f"Energy convergence for {instance_type_logging} -- p = {n_layers}")
+                            pylab.legend(loc="upper right")
+                            pylab.savefig(convergence_plot_fn)
+                            mlflow.log_artifact(convergence_plot_fn)
+                        except:
+                            print("Unable to load artifact to MLFLOW")
 
     print(f"\n{'-'*50}\n{'-'*50}\n{' '*18} Run Complete \n{'-'*50}\n{'-'*50}\n")
 
