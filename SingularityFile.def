@@ -154,6 +154,18 @@ From: python:3.9.2
   python maxcut_qaoa_layers_vanilla.py -T True
 
 ####################################################
+# APP TO RUN QAOA VANILLA INSTANCE
+####################################################
+%apphelp run_qaoa_maxcut_optimizers
+
+%applabels run_qaoa_maxcut_optimizers
+  APP_NAME QAOA_MAXCUT_OPTIMIZERS
+
+%apprun run_qaoa_maxcut_optimizers
+  # Run experiment
+  python maxcut_qaoa_optimisers.py -T True
+
+####################################################
 # APP TO BUILD EXPERIMENTS
 ####################################################
 %apphelp build_instances

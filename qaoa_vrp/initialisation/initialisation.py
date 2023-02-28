@@ -8,6 +8,64 @@ from qaoa_vrp.algorithms.QAOA_cust import (
 )
 
 
+def convert_to_fourier_point(
+    point: List[float], num_params_in_fourier_point: int
+) -> List[float]:
+    """Converts a point to fourier space.
+    Args:
+        point: The point to convert.
+        num_params_in_fourier_point: The length of the resulting fourier point. Must be even.
+    Returns:
+        The converted point in fourier space.
+    """
+    fourier_point = [0] * num_params_in_fourier_point
+    reps = int(len(point) / 2)  # point should always be even
+    max_frequency = int(
+        num_params_in_fourier_point / 2
+    )  # num_params_in_fourier_point should always be even
+    for i in range(max_frequency):
+        fourier_point[i] = 0
+        for k in range(reps):
+            fourier_point[i] += point[k] * math.sin(
+                (k + 0.5) * (i + 0.5) * math.pi / max_frequency
+            )
+        fourier_point[i] = 2 * fourier_point[i] / reps
+
+        fourier_point[i + max_frequency] = 0
+        for k in range(reps):
+            fourier_point[i + max_frequency] += point[k + reps] * math.cos(
+                (k + 0.5) * (i + 0.5) * math.pi / max_frequency
+            )
+        fourier_point[i + max_frequency] = 2 * fourier_point[i + max_frequency] / reps
+    return fourier_point
+
+def convert_from_fourier_point(
+    fourier_point: List[float], num_params_in_point: int
+) -> List[float]:
+    """Converts a point in Fourier space back to QAOA angles.
+    Args:
+        fourier_point: The point in Fourier space to convert.
+        num_params_in_point: The length of the resulting point. Must be even.
+    Returns:
+        The converted point in the form of QAOA rotation angles.
+    """
+    new_point = [0] * num_params_in_point
+    reps = int(num_params_in_point / 2)  # num_params_in_result should always be even
+    max_frequency = int(len(fourier_point) / 2)  # fourier_point should always be even
+    for i in range(reps):
+        new_point[i] = 0
+        for k in range(max_frequency):
+            new_point[i] += fourier_point[k] * math.sin(
+                (k + 0.5) * (i + 0.5) * math.pi / reps
+            )
+
+        new_point[i + reps] = 0
+        for k in range(max_frequency):
+            new_point[i + reps] += fourier_point[k + max_frequency] * math.cos(
+                (k + 0.5) * (i + 0.5) * math.pi / reps
+            )
+    return new_point
+
 class Initialisation:
     """Initialisation Class for the method for initialisations"""
 
