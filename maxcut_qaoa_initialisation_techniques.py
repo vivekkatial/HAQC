@@ -384,7 +384,7 @@ def main(track_mlflow=False):
                         pylab.clf()
                         pylab.rcParams["figure.figsize"] = (12, 8)
                         pylab.plot(total_counts, values, label=type(optimizer).__name__)
-                        pylab.axhline(y=algo_result.eigenvalue.real, ls="--", c="red")
+                        pylab.axhline(y=optimal_result.eigenvalue.real, ls="--", c="red")
                         pylab.xlabel("Eval count")
                         pylab.ylabel("Energy")
                         pylab.title(
