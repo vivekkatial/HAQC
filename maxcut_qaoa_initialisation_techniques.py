@@ -180,11 +180,16 @@ def main(track_mlflow=False):
         print(f"\n{'-'*10} Simulating Instance on Quantum using {quant_alg} {'-'*10}\n")
 
         methods = [
-            "random_initialisation",
+            # "random_initialisation",
             "trotterized_quantum_annealing",
             "perturb_from_previous_layer",
             "fourier_transform",
         ]
+
+        random.shuffle(methods)
+
+        import pdb; pdb.set_trace()
+
         initial_point = Initialisation(
             evolution_time=evolution_time
         ).random_initialisation(p=n_layers)
