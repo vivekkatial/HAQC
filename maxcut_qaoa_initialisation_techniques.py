@@ -180,10 +180,9 @@ def main(track_mlflow=False):
         print(f"\n{'-'*10} Simulating Instance on Quantum using {quant_alg} {'-'*10}\n")
 
         methods = [
-            "trotterized_quantum_annealing",
             "random_initialisation",
+            "trotterized_quantum_annealing",
             "perturb_from_previous_layer",
-            "ramped_up_initialisation",
             "fourier_transform",
         ]
         initial_point = Initialisation(
