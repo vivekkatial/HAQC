@@ -188,8 +188,6 @@ def main(track_mlflow=False):
 
         random.shuffle(methods)
 
-        import pdb; pdb.set_trace()
-
         initial_point = Initialisation(
             evolution_time=evolution_time
         ).random_initialisation(p=n_layers)
