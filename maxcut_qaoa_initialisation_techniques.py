@@ -53,18 +53,24 @@ def main(track_mlflow=False):
         mlflow.set_experiment(experiment_name)
 
     # Max Number of nodes
-    INSTANCE_SIZE = 12
+    INSTANCE_SIZE = 8
     # Number of repeated layers QAOA
-    N_LAYERS = 10
+    N_LAYERS = 4
     # Max iterations
     MAX_ITERATIONS = 2000
     # Number of restarts
-    N_RESTARTS =6
-    
-    # Generate all graph sources
-    G_instances = create_graphs_from_all_sources(instance_size=N, sources="ALL")
+    N_RESTARTS = 3
+    # Evolution Time
+    evolution_time = 5
 
+    # Generate all graph sources
+    G_instances = create_graphs_from_all_sources(
+        instance_size=INSTANCE_SIZE, sources="ALL"
+    )
+
+    # Randomly initialise layer alpha, beta at layer 1
     for i, graph_instance in enumerate(G_instances):
+        instance_size = INSTANCE_SIZE
         print(
             f"\n{'-'*50}\nRunning Experiment for {graph_instance.graph_type} of size {instance_size}\n{'-'*50}\n"
         )
@@ -110,24 +116,18 @@ def main(track_mlflow=False):
                 bottom_nodes = list(bottom_nodes)
                 top_nodes = list(top_nodes)
                 pos.update(
-                    (i, (i - bottom_nodes[-1] / 2, 1))
-                    for i in range(bottom_nodes[-1])
+                    (i, (i - bottom_nodes[-1] / 2, 1)) for i in range(bottom_nodes[-1])
                 )
                 pos.update(
                     (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
-                    for i in range(
-                        bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1]
-                    )
+                    for i in range(bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1])
                 )
                 draw_graph(G, colors, pos)
         except:
             pos = nx.spring_layout(G)
             draw_graph(G, colors, pos)
         print(
-            "\nBest solution = "
-            + str(xbest_brute)
-            + " cost = "
-            + str(best_cost_brute)
+            "\nBest solution = " + str(xbest_brute) + " cost = " + str(best_cost_brute)
         )
 
         max_cut = Maxcut(graph_instance.weight_matrix)
@@ -177,9 +177,7 @@ def main(track_mlflow=False):
         print(f"Running job on instance size of N={instance_size} for {n_layers}")
 
         quant_alg = "QAOA"
-        print(
-            f"\n{'-'*10} Simulating Instance on Quantum using {quant_alg} {'-'*10}\n"
-        )
+        print(f"\n{'-'*10} Simulating Instance on Quantum using {quant_alg} {'-'*10}\n")
 
         methods = [
             "trotterized_quantum_annealing",
@@ -189,78 +187,109 @@ def main(track_mlflow=False):
             "fourier_transform",
         ]
         initial_point = Initialisation(
-                        evolution_time=evolution_time
-                    ).random_initialisation(p=p)
+            evolution_time=evolution_time
+        ).random_initialisation(p=n_layers)
         for method in methods:
-            Initialisation(p=n_layers, initial_point=initial_point, method=method)
-        # Run optimisation code
-        optimizer = COBYLA(maxiter=MAX_ITERATIONS)
-        num_qubits = qubitOp.num_qubits
 
-        init_state = np.random.rand(num_qubits) * 2 * np.pi
-        print(f"The initial state is {init_state}")
+            # Run optimisation code
+            optimizer = COBYLA(maxiter=MAX_ITERATIONS)
+            num_qubits = qubitOp.num_qubits
+            result = {"algo": None, "result": None}
 
-        result = {"algo": None, "result": None}
-
-        ## Setting parameters for a run (Simulator Backend etc)
-        algorithm_globals.random_seed = 12321
-        seed = 10598
-        backend = Aer.get_backend("aer_simulator_statevector")
-        quantum_instance = QuantumInstance(
-            backend, seed_simulator=seed, seed_transpiler=seed
-        )
-
-        print(f"The initial state is {init_state}")
-        print(f"Testing Optimizer {i+1}: {type(optimizer).__name__}")
-
-        counts = []
-        values = []
-
-        # Callback definition
-        def store_intermediate_result(eval_count, parameters, mean, std):
-            if track_mlflow:
-                mlflow.log_metric(
-                    f"energy_{quant_alg}_{instance_type_logging}_{instance_size}_n_layer_{n_layers}",
-                    mean,
-                    step=len(counts),
-                )
-                mlflow.log_metric(
-                    f"min_energy_{quant_alg}_{instance_type_logging}_{instance_size}__{n_layers}",
-                    optimal_result.eigenvalue.real,
-                    step=len(counts),
-                )
-                
-            if eval_count % 100 == 0:
-                print(
-                    f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
-                )
-            counts.append(eval_count)
-            values.append(mean)
-
-        for restart in range(N_RESTARTS):
-            print(f"Running Optimization at n_restart={restart}")
-            init_state = np.random.rand(4) * 2 * np.pi
-
-            qaoa = QAOA(
-                optimizer=optimizer,
-                reps=n_layers,
-                initial_point=list(2 * np.pi * np.random.random(2 * n_layers)),
-                callback=store_intermediate_result,
-                quantum_instance=quantum_instance,
+            ## Setting parameters for a run (Simulator Backend etc)
+            algorithm_globals.random_seed = 12321
+            seed = 10598
+            backend = Aer.get_backend("aer_simulator_statevector")
+            quantum_instance = QuantumInstance(
+                backend, seed_simulator=seed, seed_transpiler=seed
             )
-            algo_result = qaoa.compute_minimum_eigenvalue(qubitOp)
 
-            logged_parameters = clean_parameters_for_logging(
-                algo_result=algo_result,
-                n_qubits=instance_size,
-                instanceType=instance_type_logging,
-                n_layers=n_layers,
-                restart=restart
-            )
-            print(json.dumps(logged_parameters, indent=3))            
-            if track_mlflow:
-                mlflow.log_metrics(logged_parameters)
-            
+            print(f"Testing Optimizer {i+1}: {type(optimizer).__name__} on method: {method}")
+
+            counts = []
+            values = []
+
+            # Callback definition
+            def store_intermediate_result(eval_count, parameters, mean, std):
+                if track_mlflow:
+                    mlflow.log_metric(
+                        f"energy_{quant_alg}_instance_type_{instance_type_logging}_size_{instance_size}_n_layer_{n_layers}_method_{method}",
+                        mean,
+                        step=len(counts),
+                    )
+                    mlflow.log_metric(
+                        f"min_energy_{quant_alg}_{instance_type_logging}_{instance_size}_{n_layers}_method_{method}",
+                        optimal_result.eigenvalue.real,
+                        step=len(counts),
+                    )
+
+                if eval_count % 100 == 0:
+                    print(
+                        f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
+                    )
+                counts.append(eval_count)
+                values.append(mean)
+
+            for restart in range(N_RESTARTS):
+                print(f"Running Optimization at n_restart={restart}")
+                InitialPoint = Initialisation(
+                    p=1, initial_point=initial_point, method=method
+                )
+                # Initiate a random point uniformly from [0,1]
+                initialisation_method = getattr(
+                    InitialPoint, InitialPoint.initialisation_method
+                )
+
+                if method in ["perturb_from_previous_layer", "fourier_transform"]:
+                    layer = 1
+                    while layer <= N_LAYERS:
+                        if layer == 1:
+                            qaoa = QAOA(
+                                optimizer=optimizer,
+                                reps=layer,
+                                initial_point=np.random.rand(2) * 2 * np.pi,
+                                callback=store_intermediate_result,
+                                quantum_instance=quantum_instance,
+                            )    
+                        else:
+                            qaoa = QAOA(
+                                optimizer=optimizer,
+                                reps=layer,
+                                initial_point=InitialPoint.initial_point,
+                                callback=store_intermediate_result,
+                                quantum_instance=quantum_instance,
+                            )
+                        algo_result = qaoa.compute_minimum_eigenvalue(qubitOp)
+                        layer += 1
+                        next_layer_init = list(algo_result.optimal_parameters.values())
+                        InitialPoint.initial_point = initialisation_method(
+                            p=layer,
+                            previous_layer_initial_point=next_layer_init,
+                        )
+                else:
+                    # import pdb; pdb.set_trace()
+                    InitialPoint.initial_point = initialisation_method(p=n_layers)
+                    qaoa = QAOA(
+                        optimizer=optimizer,
+                        reps=n_layers,
+                        initial_point=InitialPoint.initial_point,
+                        callback=store_intermediate_result,
+                        quantum_instance=quantum_instance,
+                    )
+                    algo_result = qaoa.compute_minimum_eigenvalue(qubitOp)
+
+                logged_parameters = clean_parameters_for_logging(
+                    algo_result=algo_result,
+                    n_qubits=instance_size,
+                    instanceType=instance_type_logging,
+                    n_layers=n_layers,
+                    restart=restart,
+                    method=method
+                )
+                print(json.dumps(logged_parameters, indent=3))
+                if track_mlflow:
+                    mlflow.log_metrics(logged_parameters)
+
             # Convergence array
             total_counts = np.arange(0, len(counts))
             values = np.asarray(values)
@@ -289,22 +318,22 @@ def main(track_mlflow=False):
 
             if track_mlflow:
                 print(
-                    f"\n{'-'*50}\n Logging Results for {instance_type_logging} of size {instance_size}\n{'-'*50}\n"
+                    f"\n{'-'*50}\n Logging Results for {instance_type_logging} of size {instance_size} method: {method}\n{'-'*50}\n"
                 )
                 mlflow.log_metric(
-                    f"energy_gap_{quant_alg}_{instance_type_logging}_{instance_size}",
+                    f"energy_gap_{quant_alg}_{instance_type_logging}_{instance_size}_method_{method}",
                     energy_gap,
                 )
                 mlflow.log_metric(
-                    f"final_energy_{quant_alg}_{instance_type_logging}_{instance_size}",
+                    f"final_energy_{quant_alg}_{instance_type_logging}_{instance_size}_method_{method}",
                     algo_result.eigenvalue.real,
                 )
                 mlflow.log_metric(
-                    f"maxcut_objective_{quant_alg}_{instance_type_logging}_{instance_size}",
+                    f"maxcut_objective_{quant_alg}_{instance_type_logging}_{instance_size}_method_{method}",
                     algo_result.eigenvalue.real + offset,
                 )
                 mlflow.log_metric(
-                    f"solution_objective_{quant_alg}_{instance_type_logging}_{instance_size}",
+                    f"solution_objective_{quant_alg}_{instance_type_logging}_{instance_size}_method_{method}",
                     qp.objective.evaluate(x),
                 )
 
@@ -348,7 +377,7 @@ def main(track_mlflow=False):
 
                     # Plot convergence
                     try:
-                        convergence_plot_fn = f"convergence_plot_{quant_alg}_{instance_type_logging}_{instance_size}.png"
+                        convergence_plot_fn = f"convergence_plot_{quant_alg}_{instance_type_logging}_{instance_size}_method_{method}.png"
                         convergence_plot_fn = os.path.join(
                             temp_dir, convergence_plot_fn
                         )
@@ -358,7 +387,9 @@ def main(track_mlflow=False):
                         pylab.axhline(y=algo_result.eigenvalue.real, ls="--", c="red")
                         pylab.xlabel("Eval count")
                         pylab.ylabel("Energy")
-                        pylab.title(f"Energy convergence for {instance_type_logging} -- p = {n_layers}")
+                        pylab.title(
+                            f"Energy convergence for {instance_type_logging} -- p = {n_layers}"
+                        )
                         pylab.legend(loc="upper right")
                         pylab.savefig(convergence_plot_fn)
                         mlflow.log_artifact(convergence_plot_fn)

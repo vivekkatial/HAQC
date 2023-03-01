@@ -133,7 +133,8 @@ def main(track_mlflow=False):
 
         # Create a 4-regular graph with costs (-1,0,1) (based on https://arxiv.org/pdf/1908.08862.pdf)
         G_four_regular_fixed_weights = GraphInstance(
-            nx.random_regular_graph(d=4, n=N), graph_type="4-Regular Graph Fixed Weights"
+            nx.random_regular_graph(d=4, n=N),
+            graph_type="4-Regular Graph Fixed Weights",
         )
         G_instances.append(G_four_regular_fixed_weights)
 
@@ -285,7 +286,7 @@ def main(track_mlflow=False):
                         optimal_result.eigenvalue.real,
                         step=len(counts),
                     )
-                    
+
                 if eval_count % 100 == 0:
                     print(
                         f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
@@ -311,7 +312,7 @@ def main(track_mlflow=False):
                         algo_result=algo_result,
                         instance_size=instance_size,
                         graph_type=instance_type_logging,
-                        restart=restart
+                        restart=restart,
                     )
                     print(json.dumps(logged_parameters, indent=3))
                     mlflow.log_metrics(logged_parameters)

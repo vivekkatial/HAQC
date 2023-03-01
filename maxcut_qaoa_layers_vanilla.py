@@ -64,7 +64,9 @@ def main(track_mlflow=False):
     print(f"Running job on instance size of N={instance_size} for upto {N_LAYERS}")
 
     # Generate all graph sources
-    G_instances = create_graphs_from_all_sources(instance_size=INSTANCE_SIZE, sources="-")
+    G_instances = create_graphs_from_all_sources(
+        instance_size=INSTANCE_SIZE, sources="-"
+    )
 
     for i, graph_instance in enumerate(G_instances):
         with mlflow.start_run():
@@ -175,7 +177,7 @@ def main(track_mlflow=False):
             ################################
             # Quantum Runs
             ################################
-            for n_layers in range(1, N_LAYERS+1):
+            for n_layers in range(1, N_LAYERS + 1):
                 quant_alg = "QAOA"
                 print(
                     f"\n{'-'*10} Simulating Instance on Quantum using {quant_alg} {'-'*10}\n"
@@ -210,7 +212,7 @@ def main(track_mlflow=False):
                             optimal_result.eigenvalue.real,
                             step=len(counts),
                         )
-                        
+
                     if eval_count % 100 == 0:
                         print(
                             f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
@@ -234,12 +236,12 @@ def main(track_mlflow=False):
                         algo_result=algo_result,
                         n_qubits=instance_size,
                         n_layers=n_layers,
-                        restart=restart
+                        restart=restart,
                     )
                     print(json.dumps(logged_parameters, indent=3))
                     if track_mlflow:
                         mlflow.log_metrics(logged_parameters)
-                    
+
                 # Convergence array
                 total_counts = np.arange(0, len(counts))
                 values = np.asarray(values)
@@ -296,7 +298,9 @@ def main(track_mlflow=False):
                         try:
                             if graph_instance.graph_type == "Nearly Complete BiPartite":
                                 pos = {}
-                                bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(G)
+                                bottom_nodes, top_nodes = nx.algorithms.bipartite.sets(
+                                    G
+                                )
                                 bottom_nodes = list(bottom_nodes)
                                 top_nodes = list(top_nodes)
                                 pos.update(
@@ -306,7 +310,8 @@ def main(track_mlflow=False):
                                 pos.update(
                                     (i, (i - bottom_nodes[-1] - top_nodes[-1] / 2, 0))
                                     for i in range(
-                                        bottom_nodes[-1], bottom_nodes[-1] + top_nodes[-1]
+                                        bottom_nodes[-1],
+                                        bottom_nodes[-1] + top_nodes[-1],
                                     )
                                 )
                                 draw_graph(G, colors, pos)
@@ -333,11 +338,17 @@ def main(track_mlflow=False):
                             )
                             pylab.clf()
                             pylab.rcParams["figure.figsize"] = (12, 8)
-                            pylab.plot(total_counts, values, label=type(optimizer).__name__)
-                            pylab.axhline(y=optimal_result.eigenvalue.real, ls="--", c="red")
+                            pylab.plot(
+                                total_counts, values, label=type(optimizer).__name__
+                            )
+                            pylab.axhline(
+                                y=optimal_result.eigenvalue.real, ls="--", c="red"
+                            )
                             pylab.xlabel("Eval count")
                             pylab.ylabel("Energy")
-                            pylab.title(f"Energy convergence for {instance_type_logging} -- p = {n_layers}")
+                            pylab.title(
+                                f"Energy convergence for {instance_type_logging} -- p = {n_layers}"
+                            )
                             pylab.legend(loc="upper right")
                             pylab.savefig(convergence_plot_fn)
                             mlflow.log_artifact(convergence_plot_fn)

@@ -1,11 +1,7 @@
 from typing import List, Optional
 import numpy as np
 from numpy.random.mtrand import random, uniform
-
-from qaoa_vrp.algorithms.QAOA_cust import (
-    convert_to_fourier_point,
-    convert_from_fourier_point,
-)
+import math
 
 
 def convert_to_fourier_point(
@@ -39,6 +35,7 @@ def convert_to_fourier_point(
         fourier_point[i + max_frequency] = 2 * fourier_point[i + max_frequency] / reps
     return fourier_point
 
+
 def convert_from_fourier_point(
     fourier_point: List[float], num_params_in_point: int
 ) -> List[float]:
@@ -65,6 +62,7 @@ def convert_from_fourier_point(
                 (k + 0.5) * (i + 0.5) * math.pi / reps
             )
     return new_point
+
 
 class Initialisation:
     """Initialisation Class for the method for initialisations"""
