@@ -214,6 +214,7 @@ def main(track_mlflow=False):
             # Callback definition
             def store_intermediate_result(eval_count, parameters, mean, std):
                 if track_mlflow:
+                    import pdb; pdb.set_trace()
                     mlflow.log_metric(
                         f"energy_{quant_alg}_instance_type_{instance_type_logging}_size_{instance_size}_n_layer_{n_layers}_method_{method}",
                         mean,
