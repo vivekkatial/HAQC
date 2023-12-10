@@ -58,6 +58,7 @@ for size in tqdm(node_sizes, desc='Progress'):
 
 plt.tight_layout()
 plt.savefig(os.path.join(plot_subdir, 'different_sized_networks.png'))
+plt.clf()
 
 G = nx.random_regular_graph(3, 4)
 # Generate the adjacency matrix
@@ -113,7 +114,7 @@ plt.ylabel(r'$\beta$')
 plt.title('Parameter landscape for 1-layer QAOA MAXCUT of a 4 Regular graph')
 plt.colorbar()
 plt.savefig(os.path.join(plot_subdir, 'landscape_plot.png'))
-
+plt.clf()
 
 
 # ### Brute Force Solution for the Max-Cut Problem
@@ -148,7 +149,7 @@ node_colors = ['pink' if node in max_cut_partition else 'lightblue' for node in 
 # Draw the graph with nodes colored based on the solution
 nx.draw(G, with_labels=True, node_color=node_colors, edge_color='gray', node_size=700, font_size=10)
 plt.savefig(os.path.join(plot_subdir, 'maxcut_solution_plot.png'))
-
+plt.clf()
 
 logging.info(f"\n{'-'*10} Solving for Exact Ground State {'-'*10}\n")
 
@@ -219,7 +220,8 @@ plt.xlabel("Eval count")
 plt.ylabel("Energy")
 plt.title("Energy convergence for various optimizers")
 plt.legend(loc="upper right")
-
+plt.savefig(os.path.join(plot_subdir, 'energy_convergence_optimisation_plot.png'))
+plt.clf()
 
 # QAOA Result Analysis for MaxCut Problem
 
@@ -272,12 +274,13 @@ plt.plot(gamma_values, beta_values, marker='o', color='cyan', markersize=1, line
 
 # Increase the size and change the color of the start and end markers
 if gamma_values and beta_values:
-    plt.scatter(gamma_values[0], beta_values[0], color='lime', s=100, label='Start', zorder=2)
-    plt.scatter(gamma_values[-1], beta_values[-1], color='magenta', s=100, label='End', zorder=2)
+    plt.scatter(gamma_values[0], beta_values[0], color='lime', s=10, label='Start', zorder=2)
+    plt.scatter(gamma_values[-1], beta_values[-1], color='magenta', s=10, label='End', zorder=2)
 
 
 plt.legend()
 plt.savefig(os.path.join(plot_subdir, 'landscape_optimisation_plot.png'))
+plt.clf()
 
 # Optionally, plot gamma and beta values over iterations
 plt.figure(figsize=(12, 6))

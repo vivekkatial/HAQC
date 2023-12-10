@@ -66,6 +66,7 @@ sympy = "1.11.1"
 pylatexenc = "^2.10"
 plotly = "^5.18.0"
 nbformat = "^5.9.2"
+tqdm = "^4.66.1"
 
 [tool.poetry.dev-dependencies]
 
