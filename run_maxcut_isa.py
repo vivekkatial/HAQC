@@ -1,4 +1,3 @@
-
 import os
 # Create a subdirectory for plots if it doesn't exist
 plot_subdir = 'plots'
@@ -33,9 +32,7 @@ from itertools import combinations
 from qaoa_vrp.generators.graph_instance import create_graphs_from_all_sources
 from qaoa_vrp.exp_utils import (
     str2bool,
-    make_temp_directory,
     to_snake_case,
-    clean_parameters_for_logging,
 )
 from qaoa_vrp.features.graph_features import get_graph_features
 
@@ -255,11 +252,18 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg):
 
     # Output performance metrics
     logging.info(f"\n{'-'*10} MAXCUT Performance Metrics {'-'*10}\n")
-
     logging.info(f"Final energy <C>: {qaoa_result.eigenvalue.real}")
     logging.info(f"Energy gap: {energy_gap}")
     logging.info(f"Probability of being in the ground state P(C_max): {success_probability}")
     logging.info(f"Approximation Ratio: {approximation_ratio}")
+
+    if track_mlflow:
+        mlflow.log_metric("final_energy", qaoa_result.eigenvalue.real)
+        mlflow.log_metric("energy_gap", energy_gap)
+        mlflow.log_metric("p_success", success_probability)
+        mlflow.log_metric("approximation_ratio", approximation_ratio)
+
+
 
     # Output other additional information
     logging.info(f"\n{'-'*10} Other Performance Information {'-'*10}\n")

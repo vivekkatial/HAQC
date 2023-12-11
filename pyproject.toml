@@ -67,6 +67,7 @@ pylatexenc = "^2.10"
 plotly = "^5.18.0"
 nbformat = "^5.9.2"
 tqdm = "^4.66.1"
+pynauty = "^2.8.6"
 
 [tool.poetry.dev-dependencies]
 

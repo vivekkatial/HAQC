@@ -3,28 +3,38 @@
 set -eo pipefail
 printf "\n       \\               ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ \n        \ji            ♥ Running VQE MAXCUT Experiments ♥\n        /.(((          ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ \n       (,/\"(((__,--. \n           \  ) _( /{  \n           !|| \" :||    \n           !||   :||  \n           '''   '''  \n"
 
+# Define the array of node sizes
+node_sizes=(6 8 10 12)
 
-# Set variables
-export NodeMemory=40GB
+# Define the array of graph types
+graph_types=("Nearly Complete BiPartite" "Uniform Random" "Power Law Tree" "Watts-Strogatz small world" "Nearly Complete BiPartite" "3-Regular Graph" "4-Regular Graph")
 
-# Build random instances
-# echo "♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥"
-# echo "♥ Building Random Instances ... ♥"
-# echo "♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥"
+# Initialize counter
+total_jobs=0
 
-# sbatch --output=$log_file bin/run-experiments.slurm $exp_run_params
-
-
-# echo "♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥"
-# echo "♥ Run Each Random Instance  ... ♥"
-# echo "♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥"
-
-
+# Main loop
 for i in {1..150}
 do
-   echo "Allocating node $NodeMemory memory for run number: $i"
-   log_file="logs/vqe_maxcut_run_all_instance_$i.log"
-   echo "Results will be logged into $log_file"
-   sbatch --mem $NodeMemory --output=$log_file bin/maxcut/run_maxcut.slurm
-   # singularity run --app run_vqe_maxcut vqe_maxcut.img
+   for node_size in "${node_sizes[@]}"; do
+      for graph_type in "${graph_types[@]}"; do
+         # Set NodeMemory based on node_size
+         if [ "$node_size" -lt 10 ]; then
+            NodeMemory="16GB"
+         else
+            NodeMemory="40GB"
+         fi
+
+         echo "Allocating node $NodeMemory memory for run number: $i, Node Size: $node_size, Graph Type: $graph_type"
+         log_file="logs/vqe_maxcut_node_${node_size}_graph_${graph_type}_run_$i.log"
+         echo "Results will be logged into $log_file"
+         # sbatch --mem $NodeMemory --output=$log_file bin/maxcut/run_maxcut.slurm $node_size "$graph_type"
+         # singularity run --app run_vqe_maxcut vqe_maxcut.img
+         # Increment the counter
+         ((total_jobs++))
+         echo "Job number $total_jobs submitted"
+      done
+   done
 done
+
+# Display the total number of jobs submitted
+echo "Total number of jobs submitted: $total_jobs"

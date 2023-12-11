@@ -1171,6 +1171,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "pynauty"
+version = "2.8.6"
+description = "Isomorphism testing and automorphisms of graphs."
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "pyparsing"
 version = "3.1.1"
 description = "pyparsing module - Classes and methods to define and execute parsing grammars"
@@ -1809,7 +1817,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-ena
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "444d6f13568f3fbf5d7a7496d1ad0a25dc7b1741d769a16a0763ae6732728fba"
+content-hash = "61b1c2ab29b83b593c0bceb496311991599a3b0039d5b437e6e736734246e279"
 
 [metadata.files]
 alembic = [
@@ -2741,6 +2749,14 @@ pyjwt = [
 ]
 pylatexenc = [
     {file = "pylatexenc-2.10.tar.gz", hash = "sha256:3dd8fd84eb46dc30bee1e23eaab8d8fb5a7f507347b23e5f38ad9675c84f40d3"},
+]
+pynauty = [
+    {file = "pynauty-2.8.6-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:144843beec906088beaddcda2e81f1fd36f69d1b8f295a8439bb2fce74801d78"},
+    {file = "pynauty-2.8.6-cp310-cp310-manylinux_2_31_x86_64.whl", hash = "sha256:8ae9e45a9ffb8e58019a48e2c9de634ef3ddf2f0806fdbcd4113608b60de14fd"},
+    {file = "pynauty-2.8.6-cp310-cp310-manylinux_2_36_x86_64.whl", hash = "sha256:5455540713e1f6c4bf68b0822d818f7c1bd316e3a81cebde1c1bb51eb49e000a"},
+    {file = "pynauty-2.8.6-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:9cf55ec10cf1894d532c11ecc488ad7009d8a32576411fbe45f749b658f17fb6"},
+    {file = "pynauty-2.8.6-cp39-cp39-manylinux_2_31_x86_64.whl", hash = "sha256:afaaadbc2abb675e3508ebb4d8dcf060a5e2a4cb207146f37220f8106547a471"},
+    {file = "pynauty-2.8.6.tar.gz", hash = "sha256:7685cd01bc3835341921b42821e2cd7da1d287c4726aa845da290edbfa07d528"},
 ]
 pyparsing = [
     {file = "pyparsing-3.1.1-py3-none-any.whl", hash = "sha256:32c7c0b711493c72ff18a981d24f28aaf9c1fb7ed5e9667c9e84e3db623bdbfb"},
