@@ -9,6 +9,20 @@ import contextlib
 import tempfile
 import shutil
 import re
+import boto3
+from botocore.exceptions import NoCredentialsError
+
+def check_boto3_credentials():
+    try:
+        # Create a boto3 client to check for credentials
+        client = boto3.client('s3')
+        # Try to list buckets as a test command, it requires valid credentials
+        client.list_buckets()
+        return "AWS credentials are found and valid."
+    except NoCredentialsError:
+        return "No AWS credentials found."
+    except Exception as e:
+        return f"An error occurred: {e}"
 
 
 def to_snake_case(string):

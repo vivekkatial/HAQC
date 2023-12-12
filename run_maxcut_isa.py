@@ -24,7 +24,7 @@ from itertools import combinations
 
 # Custom imports
 from qaoa_vrp.generators.graph_instance import create_graphs_from_all_sources
-from qaoa_vrp.exp_utils import str2bool, to_snake_case, make_temp_directory
+from qaoa_vrp.exp_utils import str2bool, to_snake_case, make_temp_directory, check_boto3_credentials
 from qaoa_vrp.features.graph_features import get_graph_features
 from qaoa_vrp.parallel.landscape_parallel import parallel_computation
 
@@ -373,6 +373,8 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
 
 
 if __name__ == "__main__":
+    check_boto3_credentials()
+
     parser = argparse.ArgumentParser(
         description="Run QAOA script with custom parameters."
     )
