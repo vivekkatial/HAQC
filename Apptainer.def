@@ -136,12 +136,26 @@ From: python:3.9.2
   APP_NAME QAOA_MAXCUT_PARAM_CONC
 
 %apprun run_qaoa_maxcut_params_conc
-  # Run experiment
-  node_size="$1"
-  graph_type="$2"
-  n_layers="$3"
-  echo $node_size $graph_type $n_layers
-  python run_maxcut_isa.py -T True -G $graph_type -n $node_size -l $n_layers
+    # Check if exactly three arguments are provided
+    if [ "$#" -ne 3 ]; then
+        echo "Error: Exactly three arguments required: node_size, graph_type, n_layers"
+        echo "Usage: run_qaoa_maxcut_params_conc <node_size> <graph_type> <n_layers>"
+        exit 1
+    fi
+
+    node_size="$1"
+    graph_type="$2"
+    n_layers="$3"
+
+    # Echoing arguments for confirmation
+    echo "Running experiment with the following parameters:"
+    echo "Node Size: $node_size"
+    echo "Graph Type: $graph_type"
+    echo "Number of Layers: $n_layers"
+
+    # Execute the Python script with provided arguments
+    python run_maxcut_isa.py -T True -G "$graph_type" -n "$node_size" -l "$n_layers"
+
   
 
 
