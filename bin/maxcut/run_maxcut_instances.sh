@@ -7,7 +7,7 @@ printf "\n       \\               ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ �
 node_sizes=(6 8 10 12)
 
 # Define the array of graph types
-graph_types=("Nearly Complete BiPartite" "Uniform Random" "Power Law Tree" "Watts-Strogatz small world" "Nearly Complete BiPartite" "3-Regular Graph" "4-Regular Graph")
+graph_types=("Nearly Complete BiPartite" "Uniform Random" "Power Law Tree" "Watts-Strogatz small world" "Nearly Complete BiPartite" "3-Regular Graph" "4-Regular Graph" "Geometric")
 
 # Define the array of n_layers
 n_layers=(1 2 3 4)

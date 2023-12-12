@@ -140,7 +140,7 @@ From: python:3.9.2
   node_size="$1"
   graph_type="$2"
   n_layers="$3"
-  echo $node_size $graph_types $n_layers
+  echo $node_size $graph_type $n_layers
   python run_maxcut_isa.py -T True -G $graph_type -n $node_size -l $n_layers
   
 
