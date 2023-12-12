@@ -15,7 +15,7 @@
 ### SBATCH --mail-type=ALL
 
 # Load in Singularity Model
-module load singularity/3.5.3
+module load gcccore/10.2.0; module load apptainer/1.0.3
 
 # The command to actually run the job
-singularity run --app run_vqe_maxcut vqe_maxcut.img
+apptainer run --app run_

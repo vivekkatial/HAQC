@@ -138,7 +138,11 @@ From: python:3.9.2
 
 %apprun run_qaoa_maxcut_params_conc
   # Run experiment
-  python maxcut_qaoa.py -T True
+  node_size="$1"
+  graph_type="$2"
+  n_layers="$3"
+  echo $node_size $graph_types $n_layers
+  # python maxcut_qaoa.py -T True
 
 
 ####################################################
