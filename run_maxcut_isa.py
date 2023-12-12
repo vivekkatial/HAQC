@@ -1,12 +1,5 @@
 import os
-
-# Create a subdirectory for plots if it doesn't exist
-plot_subdir = 'plots'
-if not os.path.exists(plot_subdir):
-    os.makedirs(plot_subdir)
 import logging
-from tqdm import tqdm
-
 logging.basicConfig(
     level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s'
 )
@@ -26,8 +19,6 @@ from qiskit.algorithms.optimizers import COBYLA, ADAM
 from qiskit.algorithms import QAOA, NumPyMinimumEigensolver
 from qiskit.utils import QuantumInstance
 from qiskit_optimization.applications import Maxcut
-from qiskit.opflow import AerPauliExpectation, PauliSumOp
-from qiskit.quantum_info import Statevector
 from qiskit.circuit import Parameter
 from itertools import combinations
 
@@ -35,7 +26,7 @@ from itertools import combinations
 from qaoa_vrp.generators.graph_instance import create_graphs_from_all_sources
 from qaoa_vrp.exp_utils import str2bool, to_snake_case, make_temp_directory
 from qaoa_vrp.features.graph_features import get_graph_features
-from qaoa_vrp.parallel.landscape_parallel import parallel_computation, compute_expectation_value
+from qaoa_vrp.parallel.landscape_parallel import parallel_computation
 
 
 def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
@@ -77,33 +68,11 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
     max_cut = Maxcut(adjacency_matrix)
     qubitOp, offset = max_cut.to_quadratic_program().to_ising()
 
-    # ### QAOA Circuit Preparation
-    # We initialize the QAOA circuit with a single layer (p=1).
-    # QAOA uses a combination of problem (cost) and mixer Hamiltonians,
-    # controlled by parameters \$\gamma\$ and \$\beta\$. The cost Hamiltonian encodes the problem, and
-    # the mixer Hamiltonian provides transitions between states. We use the COBYLA optimizer for the QAOA algorithm
-    #  to find optimal values of \$\gamma\$ and \$\beta\$.
+    # Landscape Analysis of Instance (at p=1)
 
-    # Define the parameters
-    gamma = Parameter('γ')
-    beta = Parameter('β')
-    p = n_layers
-    # Initialize the QAOA circuit with these parameters
-    qaoa = QAOA(optimizer=ADAM(), reps=p, initial_point=[gamma, beta])
-    # Constructing the circuit with parameter objects
-    example_qc = qaoa.construct_circuit([gamma, beta], operator=qubitOp)[0]
-
-    # Save and log the circuit
-    with make_temp_directory() as tmp_dir:
-        example_qc.draw('mpl').savefig(os.path.join(tmp_dir, 'qaoa_circuit.png'))
-        if track_mlflow:
-            mlflow.log_artifact(os.path.join(tmp_dir, 'qaoa_circuit.png'))
-        # Clear plots
-        plt.clf()
-
-    # Set Parameters for Landscape Analysis
-    p = n_layers
-    qaoa = QAOA(optimizer=COBYLA(), reps=p)
+    # Set Parameters for Landscape Analysis (number of layers must be 1)
+    p = 1
+    qaoa = QAOA(optimizer=COBYLA(), reps=1)
     gamma = np.linspace(-2 * np.pi, 2 * np.pi, 100)
     beta = np.linspace(-2 * np.pi, 2 * np.pi, 100)
 
@@ -116,18 +85,30 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
     # The color intensity indicates the expectation value of the Hamiltonian, 
     # helping identify the regions where optimal parameters may lie.
 
+
     with make_temp_directory() as tmp_dir:
-        plt.imshow(
-            obj_vals.T,
-            origin='lower',
-            cmap='hot',
-            extent=(-2 * np.pi, 2 * np.pi, -2 * np.pi, 2 * np.pi),
-        )
-        plt.xlabel(r'$\gamma$')
-        plt.ylabel(r'$\beta$')
-        plt.title('Parameter landscape for 1-layer QAOA MAXCUT of a 4 Regular graph')
-        plt.colorbar()
+        Gamma, Beta = np.meshgrid(gamma, beta)
+
+        # Plotting
+        plt.figure(figsize=(10, 8))
+        cp = plt.contourf(Gamma, Beta, obj_vals.T, cmap='viridis')  # Transpose obj_vals if necessary
+        plt.colorbar(cp)
+        plt.title('QAOA Objective Function Landscape (p=1))')
+        plt.xlabel('Gamma')
+        plt.ylabel('Beta')
+
+        # Adjust the x and y limits to show the full range of -2pi to 2pi
+        plt.xlim(-2 * np.pi, 2 * np.pi)
+        plt.ylim(-2 * np.pi, 2 * np.pi)
+
+        # Adjust the x and y labels to show pi values
+        plt.xticks(np.linspace(-2 * np.pi, 2 * np.pi, 5), 
+                ['-2π', '-π', '0', 'π', '2π'])
+        plt.yticks(np.linspace(-2 * np.pi, 2 * np.pi, 5), 
+                ['-2π', '-π', '0', 'π', '2π'])
+
         plt.savefig(os.path.join(tmp_dir, 'landscape_plot.png'))
+
         if track_mlflow:
             mlflow.log_artifact(os.path.join(tmp_dir, 'landscape_plot.png'))
         # Clear plots
@@ -203,48 +184,55 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
     # Run optimisation code
     optimizer = ADAM()
 
-    counts = []
-    values = []
-    gamma_values = []
-    beta_values = []
+
 
     backend = Aer.get_backend("aer_simulator_statevector")
     quantum_instance = QuantumInstance(backend)
     logging.info(f"Testing Optimizer {type(optimizer).__name__}")
+    
+    # Callback function to store intermediate values
+    intermediate_values = []
 
     def store_intermediate_result(eval_count, parameters, mean, std):
         if eval_count % 100 == 0:
-            logging.info(
-                f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
-            )
-        counts.append(eval_count)
-        # Store gamma and beta values
-        gamma_values.append(parameters[0])
-        beta_values.append(parameters[1])
-        values.append(mean)
+            logging.info(f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}")
+        betas = parameters[:N_LAYERS]   # Extracting beta values
+        gammas = parameters[N_LAYERS:]  # Extracting gamma values
+        intermediate_values.append({
+            'eval_count': eval_count,
+            'parameters': {'gammas': gammas, 'betas': betas},
+            'mean': mean,
+            'std': std
+        })
 
     for restart in range(N_RESTARTS):
         logging.info(f"Running Optimization at n_restart={restart}")
-        init_state = np.random.rand(N_LAYERS * 2) * 2 * np.pi
-
+        # Initialize the initial gamma and beta parameters
+        initial_beta = np.random.uniform(-2*np.pi, 2*np.pi, N_LAYERS)
+        initial_gamma = np.random.uniform(-2*np.pi, 2*np.pi, N_LAYERS)
+        initial_point = np.concatenate([initial_gamma, initial_beta])
         # QAOA definition
         qaoa = QAOA(
             optimizer=optimizer,
             reps=N_LAYERS,
-            initial_point=init_state,
-            callback=store_intermediate_result,
+            initial_point=initial_point, # initial parameter values for beta and gamma
+            callback=store_intermediate_result, 
             quantum_instance=quantum_instance,
         )
 
+        import pdb; pdb.set_trace()
         qaoa_result = qaoa.compute_minimum_eigenvalue(qubitOp)
-
-    # Convergence array
-    total_counts = np.arange(0, len(counts))
-    values = np.asarray(values)
 
     logging.info(f"\n{'-'*10} Optimization Complete {'-'*10}\n")
 
+    # Plot the convergence
     with make_temp_directory() as tmp_dir:
+        # Extract values for plotting
+        total_counts = [info['eval_count'] for info in intermediate_values]
+        values = [info['mean'] for info in intermediate_values]
+        gamma_values = [info['parameters']['gammas'] for info in intermediate_values]
+        beta_values = [info['parameters']['betas'] for info in intermediate_values]
+
         # Plot the convergence
         plt.rcParams["figure.figsize"] = (12, 8)
         plt.plot(total_counts, values, label=type(optimizer).__name__)
@@ -257,29 +245,31 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             mlflow.log_artifact(
                 os.path.join(tmp_dir, 'energy_convergence_optimisation_plot.png')
             )
-        # Clear plots
         plt.clf()
 
         # Optionally, plot gamma and beta values over iterations
         plt.figure(figsize=(12, 6))
-        plt.subplot(1, 2, 1)
-        plt.plot(total_counts, gamma_values, label='Gamma')
-        plt.xlabel('Eval count')
-        plt.ylabel('Gamma value')
-        plt.title('Gamma Convergence Over Iterations')
+        for i in range(N_LAYERS):
+            plt.subplot(1, 2, 1)
+            plt.plot(total_counts, [gamma[i] for gamma in gamma_values], label=f'Gamma {i+1}')
+            plt.xlabel('Eval count')
+            plt.ylabel('Gamma value')
+            plt.title('Gamma Convergence Over Iterations')
 
-        plt.subplot(1, 2, 2)
-        plt.plot(total_counts, beta_values, label='Beta')
-        plt.xlabel('Eval count')
-        plt.ylabel('Beta value')
-        plt.title('Beta Convergence Over Iterations')
+            plt.subplot(1, 2, 2)
+            plt.plot(total_counts, [beta[i] for beta in beta_values], label=f'Beta {i+1}')
+            plt.xlabel('Eval count')
+            plt.ylabel('Beta value')
+            plt.title('Beta Convergence Over Iterations')
+
+        plt.legend()
         plt.savefig(os.path.join(tmp_dir, 'gamma_beta_convergence_plot.png'))
         if track_mlflow:
             mlflow.log_artifact(
                 os.path.join(tmp_dir, 'gamma_beta_convergence_plot.png')
             )
-        # Clear plots
         plt.clf()
+
 
     # QAOA Result Analysis for MaxCut Problem
 
@@ -302,6 +292,12 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
     # Calculate the approximation ratio
     approximation_ratio = qaoa_result.eigenvalue.real / exact_result.eigenvalue.real
 
+    # Extract optimal parameters
+    optimal_params = qaoa_result.optimal_parameters
+    optimal_gammas = [optimal_params[param] for param in optimal_params.keys() if 'γ' in str(param)]
+    optimal_betas = [optimal_params[param] for param in optimal_params.keys() if 'β' in str(param)]
+
+
     # Output performance metrics
     logging.info(f"\n{'-'*10} MAXCUT Performance Metrics {'-'*10}\n")
     logging.info(f"Final energy <C>: {qaoa_result.eigenvalue.real}")
@@ -310,12 +306,18 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         f"Probability of being in the ground state P(C_max): {success_probability}"
     )
     logging.info(f"Approximation Ratio: {approximation_ratio}")
-
+    logging.info(f"Optimal Parameters: {optimal_params}")
+    
     if track_mlflow:
         mlflow.log_metric("final_energy", qaoa_result.eigenvalue.real)
         mlflow.log_metric("energy_gap", energy_gap)
         mlflow.log_metric("p_success", success_probability)
         mlflow.log_metric("approximation_ratio", approximation_ratio)
+        # Log each optimal parameter in MLFlow
+        for i in range(N_LAYERS):
+            mlflow.log_metric(f'optimal_gamma_{i+1}', optimal_gammas[i])
+            mlflow.log_metric(f'optimal_beta_{i+1}', optimal_betas[i])
+        
 
     # Output other additional information
     logging.info(f"\n{'-'*10} Other Performance Information {'-'*10}\n")
@@ -328,45 +330,44 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         f"Solution objective: {max_cut.to_quadratic_program().objective.evaluate(most_likely_solution)}"
     )
 
-    # Your existing code for plotting the heatmap
-    with make_temp_directory() as tmp_dir:
-        plt.imshow(
-            obj_vals.T,
-            origin='lower',
-            cmap='hot',
-            extent=(-2 * np.pi, 2 * np.pi, -2 * np.pi, 2 * np.pi),
-        )
-        plt.xlabel(r'$\gamma$')
-        plt.ylabel(r'$\beta$')
-        plt.title('Parameter landscape for 1-layer QAOA MAXCUT of a 4 Regular graph')
-        plt.colorbar()
+    # Only do optimisation heatmap if n_layers=1
+    if n_layers == 1:
+        # Your existing code for plotting the heatmap
+        with make_temp_directory() as tmp_dir:
 
-        # Increase the size and change the color of the start and end markers
-        if gamma_values and beta_values:
-            plt.scatter(
-                gamma_values[0],
-                beta_values[0],
-                color='lime',
-                s=10,
-                label='Start',
-                zorder=2,
-            )
-            plt.scatter(
-                gamma_values[-1],
-                beta_values[-1],
-                color='magenta',
-                s=10,
-                label='End',
-                zorder=2,
-            )
+            # Create a meshgrid for plotting
+            Gamma, Beta = np.meshgrid(gamma, beta)
 
-        plt.legend()
-        plt.savefig(os.path.join(tmp_dir, 'landscape_optimisation_plot.png'))
-        if track_mlflow:
-            mlflow.log_artifact(
-                os.path.join(tmp_dir, 'landscape_optimisation_plot.png')
-            )
-        plt.clf()
+            # Plotting the landscape
+            plt.figure(figsize=(10, 8))
+            cp = plt.contourf(Gamma, Beta, obj_vals.T, cmap='viridis')  # Transpose obj_vals if necessary
+            plt.colorbar(cp)
+            plt.title('QAOA Objective Function Landscape')
+            plt.xlabel('Gamma')
+            plt.ylabel('Beta')
+
+            # Set the x and y limits
+            plt.xlim(-2 * np.pi, 2 * np.pi)
+            plt.ylim(-2 * np.pi, 2 * np.pi)
+
+            # Set the x and y labels
+            plt.xticks(np.linspace(-2 * np.pi, 2 * np.pi, 5), ['-2π', '-π', '0', 'π', '2π'])
+            plt.yticks(np.linspace(-2 * np.pi, 2 * np.pi, 5), ['-2π', '-π', '0', 'π', '2π'])
+
+            # Plot the optimization path
+            if gamma_values and beta_values:
+                plt.plot(gamma_values, beta_values, '-', color='cyan', label='Optimization Path', linewidth=1, zorder=1)
+                # Highlight the start and end points
+                plt.scatter(gamma_values[0], beta_values[0], color='red', s=20, label='Start', zorder=2)
+                plt.scatter(gamma_values[-1], beta_values[-1], color='magenta', s=20, label='End', zorder=2)
+
+            plt.legend()
+            plt.savefig(os.path.join(tmp_dir, 'landscape_optimisation_plot.png'))
+            if track_mlflow:
+                mlflow.log_artifact(
+                    os.path.join(tmp_dir, 'landscape_optimisation_plot.png')
+                )
+            plt.clf()
 
     logging.info('Script finished')
 
