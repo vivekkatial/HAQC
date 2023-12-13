@@ -20,6 +20,7 @@ from qiskit.algorithms import QAOA, NumPyMinimumEigensolver
 from qiskit.utils import QuantumInstance
 from qiskit_optimization.applications import Maxcut
 from qiskit.circuit import Parameter
+from qiskit.quantum_info import Statevector
 from itertools import combinations
 
 # Custom imports
@@ -27,7 +28,7 @@ from qaoa_vrp.generators.graph_instance import create_graphs_from_all_sources
 from qaoa_vrp.exp_utils import str2bool, to_snake_case, make_temp_directory, check_boto3_credentials
 from qaoa_vrp.features.graph_features import get_graph_features
 from qaoa_vrp.parallel.landscape_parallel import parallel_computation
-
+from qaoa_vrp.solutions.solutions import get_analytical_parameters
 
 def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
 
@@ -79,7 +80,7 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
     # Example usage
     obj_vals = parallel_computation(beta,gamma, qubitOp, qaoa)
 
-    # ### Plotting the Parameter Landscape
+    # ### Plotting the Parameter Landscape https://ar5iv.labs.arxiv.org/html/2209.01159#A5
     # The heatmap below represents the landscape of the objective function across 
     # different values of \$\gamma\$ and \$\beta\$.
     # The color intensity indicates the expectation value of the Hamiltonian, 
@@ -97,15 +98,14 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         plt.ylabel('Gamma')
 
         # Adjust the x and y limits to show the new range
-        plt.xlim(-np.pi / 2, np.pi / 2)
-        plt.ylim(-np.pi / 4, np.pi / 4)
+        plt.xlim(-np.pi / 4, np.pi / 4)
+        plt.ylim(-np.pi / 2, np.pi / 2)
 
         # Adjust the x and y labels to show the new pi values
-        plt.xticks(np.linspace(-np.pi / 2, np.pi / 2, 5), 
-                ['-π/2', '-π/4', '0', 'π/4', 'π/2'])
-        plt.yticks(np.linspace(-np.pi / 4, np.pi / 4, 5), 
+        plt.xticks(np.linspace(-np.pi / 4, np.pi / 4, 5), 
                 ['-π/4', '-π/8', '0', 'π/8', 'π/4'])
-
+        plt.yticks(np.linspace(-np.pi / 2, np.pi / 2, 5), 
+                        ['-π/2', '-π/4', '0', 'π/4', 'π/2'])        
         plt.savefig(os.path.join(tmp_dir, 'landscape_plot.png'))
 
         if track_mlflow:
@@ -346,14 +346,14 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             plt.ylabel('Gamma')
 
             # Adjust the x and y limits to show the new range
-            plt.xlim(-np.pi / 2, np.pi / 2)
-            plt.ylim(-np.pi / 4, np.pi / 4)
+            plt.xlim(-np.pi / 4, np.pi / 4)
+            plt.ylim(-np.pi / 2, np.pi / 2)
 
             # Adjust the x and y labels to show the new pi values
-            plt.xticks(np.linspace(-np.pi / 2, np.pi / 2, 5), 
-                    ['-π/2', '-π/4', '0', 'π/4', 'π/2'])
-            plt.yticks(np.linspace(-np.pi / 4, np.pi / 4, 5), 
+            plt.xticks(np.linspace(-np.pi / 4, np.pi / 4, 5), 
                     ['-π/4', '-π/8', '0', 'π/8', 'π/4'])
+            plt.yticks(np.linspace(-np.pi / 2, np.pi / 2, 5), 
+                    ['-π/2', '-π/4', '0', 'π/4', 'π/2'])
             # Plot the optimization path
             if beta_values and gamma_values:
                 plt.plot(beta_values, gamma_values, '-', color='cyan', label='Optimization Path', linewidth=1, zorder=1)
@@ -368,14 +368,55 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
                     os.path.join(tmp_dir, 'landscape_optimisation_plot.png')
                 )
             plt.clf()
-    
+
     # Compute the performance metrics for using analytically found beta and gamma parameters found
     # This is based on this research: https://ar5iv.labs.arxiv.org/html/2103.11976#S4.E19
 
+    # Get analytical parameters
+    analytical_params = get_analytical_parameters(node_size, N_LAYERS)
+    logging.info(f"Analytical Parameters: {analytical_params}")
 
+    # Extract Beta and Gamma values for analytical process
+    analytical_beta_val = analytical_params[:N_LAYERS]
+    analytical_gamma_val = analytical_params[N_LAYERS:]
 
-    logging.info('Script finished')
+    # Concatenate beta and gamma into a single list for analytical process
+    analytical_params_combined = np.concatenate((analytical_beta_val, analytical_gamma_val))
 
+    # Construct the QAOA circuit with the analytical parameters
+    analytical_qc = qaoa.construct_circuit(analytical_params_combined, operator=qubitOp)[0]
+    analytical_backend = Aer.get_backend('aer_simulator')
+    analytical_statevector = Statevector.from_instruction(analytical_qc)
+    analytical_expectation = analytical_statevector.expectation_value(qubitOp).real
+
+    # Calculate the analytical energy gap
+    analytical_energy_gap = exact_result.eigenvalue.real - analytical_expectation
+
+    # Calculate the analytical approximation ratio
+    analytical_approximation_ratio = analytical_expectation / exact_result.eigenvalue.real
+
+    # Calculate analytical success probability
+    analytical_inner_product = np.dot(exact_result_vector.conj(), analytical_statevector)
+    analytical_success_probability = (np.abs(analytical_inner_product) ** 2) * 2
+
+    # Log analytical performance metrics
+    logging.info("\n" + "-"*10 + " Analytical Performance Metrics " + "-"*10)
+    logging.info(f"Analytical expectation <C>: {analytical_expectation}")
+    logging.info(f"Analytical energy gap: {analytical_energy_gap}")
+    logging.info(f"Analytical probability of being in the ground state P(C_max): {analytical_success_probability}")
+    logging.info(f"Analytical approximation ratio: {analytical_approximation_ratio}")
+
+    # Track analytical parameters in MLFlow
+    if track_mlflow:
+        mlflow.log_metric("analytical_expectation", analytical_expectation)
+        mlflow.log_metric("analytical_energy_gap", analytical_energy_gap)
+        mlflow.log_metric("analytical_p_success", analytical_success_probability)
+        mlflow.log_metric("analytical_approximation_ratio", analytical_approximation_ratio)
+        for i in range(N_LAYERS):
+            mlflow.log_metric(f'analytical_gamma_{i+1}', analytical_gamma_val[i])
+            mlflow.log_metric(f'analytical_beta_{i+1}', analytical_beta_val[i])
+
+    logging.info('Analytical script finished')
 
 if __name__ == "__main__":
     check_boto3_credentials()
