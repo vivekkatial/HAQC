@@ -236,6 +236,9 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         # Plot the convergence
         plt.rcParams["figure.figsize"] = (12, 8)
         plt.plot(total_counts, values, label=type(optimizer).__name__)
+        # Add a dotted line for the ground state energy
+        plt.axhline(exact_result.eigenvalue.real, color='black', linestyle='dashed', label='Ground state energy')
+        
         plt.xlabel("Eval count")
         plt.ylabel("Energy")
         plt.title("Energy convergence for various optimizers")
@@ -329,46 +332,7 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
     logging.info(
         f"Solution objective: {max_cut.to_quadratic_program().objective.evaluate(most_likely_solution)}"
     )
-
-    # Only do optimisation heatmap if n_layers=1
-    if n_layers == 1:
-        # Your existing code for plotting the heatmap
-        with make_temp_directory() as tmp_dir:
-
-            Beta, Gamma = np.meshgrid(beta, gamma)
-
-            # Plotting
-            plt.figure(figsize=(10, 8))
-            cp = plt.contourf(Beta, Gamma, obj_vals.T, cmap='viridis')  # Transpose obj_vals if necessary
-            plt.colorbar(cp)
-            plt.title(f'QAOA Objective Function Landscape (p=1) for  {graph_type}')
-            plt.xlabel('Beta')
-            plt.ylabel('Gamma')
-
-            # Adjust the x and y limits to show the new range
-            plt.xlim(-np.pi / 4, np.pi / 4)
-            plt.ylim(-np.pi / 2, np.pi / 2)
-
-            # Adjust the x and y labels to show the new pi values
-            plt.xticks(np.linspace(-np.pi / 4, np.pi / 4, 5), 
-                    ['-π/4', '-π/8', '0', 'π/8', 'π/4'])
-            plt.yticks(np.linspace(-np.pi / 2, np.pi / 2, 5), 
-                    ['-π/2', '-π/4', '0', 'π/4', 'π/2'])
-            # Plot the optimization path
-            if beta_values and gamma_values:
-                plt.plot(beta_values, gamma_values, '-', color='cyan', label='Optimization Path', linewidth=1, zorder=1)
-                # Highlight the start and end points
-                plt.scatter(beta_values[0], gamma_values[0], color='red', s=20, label='Start', zorder=2)
-                plt.scatter( beta_values[-1], gamma_values[-1], color='magenta', s=20, label='End', zorder=2)
-
-            plt.legend()
-            plt.savefig(os.path.join(tmp_dir, 'landscape_optimisation_plot.png'))
-            if track_mlflow:
-                mlflow.log_artifact(
-                    os.path.join(tmp_dir, 'landscape_optimisation_plot.png')
-                )
-            plt.clf()
-
+    
     # Compute the performance metrics for using analytically found beta and gamma parameters found
     # This is based on this research: https://ar5iv.labs.arxiv.org/html/2103.11976#S4.E19
 
@@ -417,6 +381,51 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             mlflow.log_metric(f'analytical_beta_{i+1}', analytical_beta_val[i])
 
     logging.info('Analytical script finished')
+
+    # Only do optimisation heatmap if n_layers=1
+    if n_layers == 1:
+        # Your existing code for plotting the heatmap
+        with make_temp_directory() as tmp_dir:
+
+            Beta, Gamma = np.meshgrid(beta, gamma)
+
+            # Plotting
+            plt.figure(figsize=(10, 8))
+            cp = plt.contourf(Beta, Gamma, obj_vals.T, cmap='viridis')  # Transpose obj_vals if necessary
+            plt.colorbar(cp)
+            plt.title(f'QAOA Objective Function Landscape (p=1) for  {graph_type}')
+            plt.xlabel('Beta')
+            plt.ylabel('Gamma')
+
+            # Adjust the x and y limits to show the new range
+            plt.xlim(-np.pi / 4, np.pi / 4)
+            plt.ylim(-np.pi / 2, np.pi / 2)
+
+            # Adjust the x and y labels to show the new pi values
+            plt.xticks(np.linspace(-np.pi / 4, np.pi / 4, 5), 
+                    ['-π/4', '-π/8', '0', 'π/8', 'π/4'])
+            plt.yticks(np.linspace(-np.pi / 2, np.pi / 2, 5), 
+                    ['-π/2', '-π/4', '0', 'π/4', 'π/2'])
+            # Plot the optimization path
+            if beta_values and gamma_values:
+                plt.plot(beta_values, gamma_values, '-', color='cyan', label='Optimization Path', linewidth=1, zorder=1)
+                # Highlight the start and end points
+                plt.scatter(beta_values[0], gamma_values[0], color='red', s=20, label='Start', zorder=2)
+                plt.scatter( beta_values[-1], gamma_values[-1], color='magenta', s=20, label='End', zorder=2)
+
+            # Add marker for analytical parameters
+            if analytical_beta_val and analytical_gamma_val:
+                plt.scatter(analytical_beta_val, analytical_gamma_val, color='orange', s=20, label='Analytical Parameters', zorder=2)
+
+            plt.legend()
+            plt.savefig(os.path.join(tmp_dir, 'landscape_optimisation_plot.png'))
+            if track_mlflow:
+                mlflow.log_artifact(
+                    os.path.join(tmp_dir, 'landscape_optimisation_plot.png')
+                )
+            plt.clf()
+
+
 
 if __name__ == "__main__":
     check_boto3_credentials()
