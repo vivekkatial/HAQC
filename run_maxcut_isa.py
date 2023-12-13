@@ -70,14 +70,14 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
 
     # Landscape Analysis of Instance (at p=1)
 
-    # Set Parameters for Landscape Analysis (number of layers must be 1)
     p = 1
     qaoa = QAOA(optimizer=COBYLA(), reps=1)
-    gamma = np.linspace(-2 * np.pi, 2 * np.pi, 100)
-    beta = np.linspace(-2 * np.pi, 2 * np.pi, 100)
+    # Use constrained search space
+    beta = np.linspace(-np.pi / 4, np.pi / 4, 100)
+    gamma = np.linspace(-np.pi / 2, np.pi / 2, 100)
 
     # Example usage
-    obj_vals = parallel_computation(gamma, beta, qubitOp, qaoa)
+    obj_vals = parallel_computation(beta,gamma, qubitOp, qaoa)
 
     # ### Plotting the Parameter Landscape
     # The heatmap below represents the landscape of the objective function across 
@@ -85,27 +85,26 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
     # The color intensity indicates the expectation value of the Hamiltonian, 
     # helping identify the regions where optimal parameters may lie.
 
-
     with make_temp_directory() as tmp_dir:
-        Gamma, Beta = np.meshgrid(gamma, beta)
+        Beta, Gamma = np.meshgrid(beta, gamma)
 
         # Plotting
         plt.figure(figsize=(10, 8))
-        cp = plt.contourf(Gamma, Beta, obj_vals.T, cmap='viridis')  # Transpose obj_vals if necessary
+        cp = plt.contourf(Beta, Gamma, obj_vals.T, cmap='viridis')  # Transpose obj_vals if necessary
         plt.colorbar(cp)
-        plt.title('QAOA Objective Function Landscape (p=1))')
-        plt.xlabel('Gamma')
-        plt.ylabel('Beta')
+        plt.title(f'QAOA Objective Function Landscape (p=1) for  {graph_type}')
+        plt.xlabel('Beta')
+        plt.ylabel('Gamma')
 
-        # Adjust the x and y limits to show the full range of -2pi to 2pi
-        plt.xlim(-2 * np.pi, 2 * np.pi)
-        plt.ylim(-2 * np.pi, 2 * np.pi)
+        # Adjust the x and y limits to show the new range
+        plt.xlim(-np.pi / 2, np.pi / 2)
+        plt.ylim(-np.pi / 4, np.pi / 4)
 
-        # Adjust the x and y labels to show pi values
-        plt.xticks(np.linspace(-2 * np.pi, 2 * np.pi, 5), 
-                ['-2π', '-π', '0', 'π', '2π'])
-        plt.yticks(np.linspace(-2 * np.pi, 2 * np.pi, 5), 
-                ['-2π', '-π', '0', 'π', '2π'])
+        # Adjust the x and y labels to show the new pi values
+        plt.xticks(np.linspace(-np.pi / 2, np.pi / 2, 5), 
+                ['-π/2', '-π/4', '0', 'π/4', 'π/2'])
+        plt.yticks(np.linspace(-np.pi / 4, np.pi / 4, 5), 
+                ['-π/4', '-π/8', '0', 'π/8', 'π/4'])
 
         plt.savefig(os.path.join(tmp_dir, 'landscape_plot.png'))
 
@@ -113,6 +112,7 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             mlflow.log_artifact(os.path.join(tmp_dir, 'landscape_plot.png'))
         # Clear plots
         plt.clf()
+
 
     # ### Brute Force Solution for the Max-Cut Problem
     # A brute-force solution to the Max-Cut problem involves evaluating every possible partition of the graph's nodes into two sets.
@@ -208,9 +208,10 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
     for restart in range(N_RESTARTS):
         logging.info(f"Running Optimization at n_restart={restart}")
         # Initialize the initial gamma and beta parameters
-        initial_beta = np.random.uniform(-2*np.pi, 2*np.pi, N_LAYERS)
-        initial_gamma = np.random.uniform(-2*np.pi, 2*np.pi, N_LAYERS)
-        initial_point = np.concatenate([initial_gamma, initial_beta])
+        initial_beta = np.random.uniform(-np.pi / 4, np.pi / 4, N_LAYERS)
+        initial_gamma = np.random.uniform(-np.pi / 2, np.pi / 2, N_LAYERS)
+        initial_point = np.concatenate([initial_beta, initial_gamma])
+
         # QAOA definition
         qaoa = QAOA(
             optimizer=optimizer,
@@ -334,31 +335,31 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         # Your existing code for plotting the heatmap
         with make_temp_directory() as tmp_dir:
 
-            # Create a meshgrid for plotting
-            Gamma, Beta = np.meshgrid(gamma, beta)
+            Beta, Gamma = np.meshgrid(beta, gamma)
 
-            # Plotting the landscape
+            # Plotting
             plt.figure(figsize=(10, 8))
-            cp = plt.contourf(Gamma, Beta, obj_vals.T, cmap='viridis')  # Transpose obj_vals if necessary
+            cp = plt.contourf(Beta, Gamma, obj_vals.T, cmap='viridis')  # Transpose obj_vals if necessary
             plt.colorbar(cp)
-            plt.title('QAOA Objective Function Landscape')
-            plt.xlabel('Gamma')
-            plt.ylabel('Beta')
+            plt.title(f'QAOA Objective Function Landscape (p=1) for  {graph_type}')
+            plt.xlabel('Beta')
+            plt.ylabel('Gamma')
 
-            # Set the x and y limits
-            plt.xlim(-2 * np.pi, 2 * np.pi)
-            plt.ylim(-2 * np.pi, 2 * np.pi)
+            # Adjust the x and y limits to show the new range
+            plt.xlim(-np.pi / 2, np.pi / 2)
+            plt.ylim(-np.pi / 4, np.pi / 4)
 
-            # Set the x and y labels
-            plt.xticks(np.linspace(-2 * np.pi, 2 * np.pi, 5), ['-2π', '-π', '0', 'π', '2π'])
-            plt.yticks(np.linspace(-2 * np.pi, 2 * np.pi, 5), ['-2π', '-π', '0', 'π', '2π'])
-
+            # Adjust the x and y labels to show the new pi values
+            plt.xticks(np.linspace(-np.pi / 2, np.pi / 2, 5), 
+                    ['-π/2', '-π/4', '0', 'π/4', 'π/2'])
+            plt.yticks(np.linspace(-np.pi / 4, np.pi / 4, 5), 
+                    ['-π/4', '-π/8', '0', 'π/8', 'π/4'])
             # Plot the optimization path
-            if gamma_values and beta_values:
-                plt.plot(gamma_values, beta_values, '-', color='cyan', label='Optimization Path', linewidth=1, zorder=1)
+            if beta_values and gamma_values:
+                plt.plot(beta_values, gamma_values, '-', color='cyan', label='Optimization Path', linewidth=1, zorder=1)
                 # Highlight the start and end points
-                plt.scatter(gamma_values[0], beta_values[0], color='red', s=20, label='Start', zorder=2)
-                plt.scatter(gamma_values[-1], beta_values[-1], color='magenta', s=20, label='End', zorder=2)
+                plt.scatter(beta_values[0], gamma_values[0], color='red', s=20, label='Start', zorder=2)
+                plt.scatter( beta_values[-1], gamma_values[-1], color='magenta', s=20, label='End', zorder=2)
 
             plt.legend()
             plt.savefig(os.path.join(tmp_dir, 'landscape_optimisation_plot.png'))
@@ -367,6 +368,11 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
                     os.path.join(tmp_dir, 'landscape_optimisation_plot.png')
                 )
             plt.clf()
+    
+    # Compute the performance metrics for using analytically found beta and gamma parameters found
+    # This is based on this research: https://ar5iv.labs.arxiv.org/html/2103.11976#S4.E19
+
+
 
     logging.info('Script finished')
 
