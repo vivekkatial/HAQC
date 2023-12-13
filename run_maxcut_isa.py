@@ -220,7 +220,6 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             quantum_instance=quantum_instance,
         )
 
-        import pdb; pdb.set_trace()
         qaoa_result = qaoa.compute_minimum_eigenvalue(qubitOp)
 
     logging.info(f"\n{'-'*10} Optimization Complete {'-'*10}\n")
