@@ -14,6 +14,8 @@
 ### SBATCH --mail-user=vkatial@student.unimelb.edu.au
 ### SBATCH --mail-type=ALL
 
+module load gcccore/10.2.0; module load apptainer/1.0.3
+
 # Load in environment modules
 source ~/.bashrc
 
