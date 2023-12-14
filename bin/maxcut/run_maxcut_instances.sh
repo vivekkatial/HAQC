@@ -10,7 +10,7 @@ node_sizes=(6 8 10 12)
 graph_types=("Nearly Complete BiPartite" "Uniform Random" "Power Law Tree" "Watts-Strogatz small world" "Nearly Complete BiPartite" "3-Regular Graph" "4-Regular Graph" "Geometric")
 
 # Define the array of n_layers
-n_layers=(1 2 3 4)
+n_layers=(1 2 3 4 5)
 
 # Initialize counter
 total_jobs=0
@@ -29,10 +29,9 @@ do
             fi
 
             echo "Allocating node $NodeMemory memory for run number: $i, Node Size: $node_size, Graph Type: $graph_type, Layer: $layer"
-            log_file="logs/vqe_maxcut_node_${node_size}_graph_${graph_type}_layer_${layer}_run_$i.log"
+            log_file="logs/qaoa_maxcut_node_${node_size}_graph_${graph_type}_layer_${layer}_run_$i.log"
             echo "Results will be logged into $log_file"
-            # sbatch --mem $NodeMemory --output=$log_file bin/maxcut/run_maxcut.slurm $node_size "$graph_type" $layer
-            # singularity run --app run_vqe_maxcut vqe_maxcut.img
+            sbatch --mem $NodeMemory --output=$log_file bin/maxcut/run_maxcut.slurm $node_size "$graph_type" $layer
             # Increment the counter
             ((total_jobs++))
             echo "Job number $total_jobs submitted"
