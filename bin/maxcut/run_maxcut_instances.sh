@@ -33,7 +33,7 @@ for i in {1..50}; do
 #               sbatch --chdir=$(pwd) --mem $NodeMemory --output="$log_file" bin/maxcut/run_maxcut.slurm $node_size "$graph_type" $layer
 
                # Increment the counter
-               ((total_jobs++))
+               total_jobs=$((total_jobs+1))
                echo "Job number $total_jobs submitted"
          done
       done
