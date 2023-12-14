@@ -27,4 +27,6 @@ echo $1 $2 $3
 apptainer run \
     --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    --pwd /mnt \
+    --bind $(pwd):/mnt \
     --app run_qaoa_maxcut_params_conc haqc.sif $1 "$2" $3
