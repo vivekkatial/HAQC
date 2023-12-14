@@ -21,21 +21,21 @@ do
    for node_size in "${node_sizes[@]}"; do
       for graph_type in "${graph_types[@]}"; do
          for layer in "${n_layers[@]}"; do
-            # Set NodeMemory based on node_size
-            if [ "$node_size" -lt 10 ]; then
-               NodeMemory="16GB"
-            else
-               NodeMemory="40GB"
-            fi
+               # Set NodeMemory based on node_size
+               if [ "$node_size" -lt 10 ]; then
+                  NodeMemory="16GB"
+               else
+                  NodeMemory="40GB"
+               fi
 
-            echo "Allocating node $NodeMemory memory for run number: $i, Node Size: $node_size, Graph Type: $graph_type, Layer: $layer"
-            log_file="logs/qaoa_maxcut_node_${node_size}_graph_${graph_type}_layer_${layer}_run_$i.log"
-            echo "Results will be logged into $log_file"
-            # sbatch --mem $NodeMemory --output="$log_file" bin/maxcut/run_maxcut.slurm $node_size "$graph_type" $layer
+               echo "Allocating node $NodeMemory memory for run number: $i, Node Size: $node_size, Graph Type: $graph_type, Layer: $layer"
+               log_file="logs/qaoa_maxcut_node_${node_size}_graph_${graph_type}_layer_${layer}_run_$i.log"
+               echo "Results will be logged into $log_file"
+               sbatch --mem $NodeMemory --output="$log_file" bin/maxcut/run_maxcut.slurm $node_size "$graph_type" $layer
 
-            # Increment the counter
-            ((total_jobs++))
-            echo "Job number $total_jobs submitted"
+               # Increment the counter
+               ((total_jobs++))
+               echo "Job number $total_jobs submitted"
          done
       done
    done
