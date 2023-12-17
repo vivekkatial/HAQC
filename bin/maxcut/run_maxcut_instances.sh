@@ -7,7 +7,7 @@ printf "\n       \\               ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ �
 node_sizes=(8 12)
 
 # Define the array of graph types
-graph_types=(""3-Regular Graph"")
+graph_types=("3-Regular Graph")
 
 # Define the array of n_layers
 n_layers=(1 3 5)
