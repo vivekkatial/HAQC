@@ -20,7 +20,7 @@ def get_analytical_parameters(n, n_layers):
 
     # 1 layer (beta = pi/(n+4) and gamma = pi - 2*beta)
     if n_layers == 1:
-        beta = np.pi/(n+4) - np.pi
+        beta = np.pi - np.pi/(n+4)
         gamma = 2*np.pi - np.pi - 2*beta
         return [beta, gamma]
     
