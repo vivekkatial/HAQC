@@ -1,4 +1,30 @@
-import numpy as np
+import numpy as n
+import networkx as nx
+from itertools import combinations
+
+def compute_max_cut_brute_force(G):
+    nodes = G.nodes()
+    n = len(nodes)
+    max_cut_value = 0
+    max_cut_partition = None
+
+    # Iterate over all possible ways to split the nodes into two sets
+    for size in range(1, n // 2 + 1):
+        for subset in combinations(nodes, size):
+            cut_value = sum(
+                (
+                    G.has_edge(i, j)
+                    for i in subset
+                    for j in G.nodes()
+                    if j not in subset
+                )
+            )
+            if cut_value > max_cut_value:
+                max_cut_value = cut_value
+                max_cut_partition = subset
+
+    return max_cut_partition, max_cut_value
+
 
 # Define functions to compute the optimal parameter values based on parameter concentration
 def get_analytical_parameters(n, n_layers):
