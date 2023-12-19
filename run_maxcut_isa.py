@@ -32,6 +32,11 @@ from qaoa_vrp.exp_utils import str2bool, to_snake_case, make_temp_directory, che
 from qaoa_vrp.features.graph_features import get_graph_features
 from qaoa_vrp.generators.parameter import get_optimal_parameters
 from qaoa_vrp.solutions.solutions import compute_max_cut_brute_force
+from qaoa_vrp.parallel.landscape_parallel import parallel_computation
+from qaoa_vrp.plot.utils import *
+
+# Theme plots to be seaborn style
+plt.style.use('seaborn')
 
 # Check that optimal parameters csv file exists
 if not os.path.exists('data/optimal-parameters.csv'):
@@ -276,6 +281,8 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             filtered_results_df = results_df[(results_df['algo'] == algo_name) & (results_df['init_type'] == init_type)]
             # Plot energy vs iterations
             plt.plot(filtered_results_df['eval_count'], filtered_results_df['energy'], label=f"{algo_name} {init_type}")
+        # Add dashed line for exact ground state energy
+        plt.axhline(y=exact_result.eigenvalue.real, color='r', linestyle='--', label='Exact Ground State Energy')
         plt.xlabel('Iterations')
         plt.ylabel('Energy')
         plt.legend()
@@ -292,6 +299,8 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             filtered_results_df = results_df[(results_df['algo'] == algo_name) & (results_df['init_type'] == init_type)]
             # Plot approximation ratio vs iterations
             plt.plot(filtered_results_df['eval_count'], filtered_results_df['approximation_ratio'], label=f"{algo_name} {init_type}")
+        # Add dashed line for approximation ratio of 1
+        plt.axhline(y=1, color='r', linestyle='--', label='Approximation Ratio of 1')
         plt.xlabel('Iterations')
         plt.ylabel('Approximation Ratio')
         plt.legend()
@@ -299,7 +308,57 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         if track_mlflow:
             mlflow.log_artifact(os.path.join(tmp_dir, 'approximation_ratio_vs_iterations.png'))
     
+    # Logging the Parameter Landscape
+    logging.info(f"\n{'-'*10} Logging the Parameter Landscape {'-'*10}\n")
+    # Note this can take some time
+    logging.info(f"Logging the Parameter Landscape for {graph_type}")
+    
+    # Landscape Analysis of Instance (at p=1)
+    qaoa = QAOA(optimizer=ADAM(), reps=1)
+    # Use constrained search space
+    beta = np.linspace(-np.pi / 2, np.pi / 2, 40)
+    gamma = np.linspace(-np.pi / 2, np.pi / 2, 40)
+    # Example usage
+    obj_vals = parallel_computation(beta,gamma, qubitOp, qaoa)
+    # ### Plotting the Parameter Landscape https://ar5iv.labs.arxiv.org/html/2209.01159#A5
+    # The heatmap below represents the landscape of the objective function across 
+    # different values of \$\gamma\$ and \$\beta\$.
+    # The color intensity indicates the expectation value of the Hamiltonian, 
+    # helping identify the regions where optimal parameters may lie.
+    with make_temp_directory() as tmp_dir:
+        Beta, Gamma = np.meshgrid(beta, gamma)
+        # Plotting
+        plt.figure(figsize=(10, 8))
+        cp = plt.contourf(Beta, Gamma, obj_vals.T, cmap='viridis')  # Transpose obj_vals if necessary
+        plt.colorbar(cp)
+        plt.title(f'QAOA Objective Function Landscape (p=1) for  {graph_type}')
+        plt.xlabel('Beta')
+        plt.ylabel('Gamma')
+        # Adjust the x and y limits to show the new range
+        plt.xlim(-np.pi / 4, np.pi / 4)
+        plt.ylim(-np.pi / 2, np.pi / 2)
+        # Adjust the x and y labels to show the new pi values
+        plt.xticks([-np.pi / 2, 0, np.pi / 2], [r'$-\pi/2$', r'$0$', r'$\pi/2$'])
+        plt.yticks([-np.pi / 2, 0, np.pi / 2], [r'$-\pi/2$', r'$0$', r'$\pi/2$'])
 
+
+        # Add markers for the optimal parameters from each initialization point
+        for index, (algo_name, initial_point, init_type) in enumerate(algos_initializations):
+            # Get initialized parameters from the initial point
+            beta_init = initial_point[:N_LAYERS][0]  # Only take first value for beta
+            gamma_init = initial_point[N_LAYERS:][0]  # Only take first value for gamma
+
+            # Use a different marker and color for each initialization
+            plt.plot(beta_init, gamma_init, color=colors[index], marker=markers[index], markersize=10, label=f"{algo_name} {init_type}")
+        
+        # Adjust legend position
+        plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=len(algos_initializations), fancybox=True, shadow=True)
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust the plot to fit the legend
+        plt.savefig(os.path.join(tmp_dir, 'landscape_plot.png'))
+        if track_mlflow:
+            mlflow.log_artifact(os.path.join(tmp_dir, 'landscape_plot.png'))
+        # Clear plots
+        plt.clf()
 
 
 
