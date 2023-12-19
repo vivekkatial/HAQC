@@ -16,7 +16,7 @@ n_layers=(3)
 total_jobs=0
 
 # Main loop (running 100 instances of each node size, graph type and layer)
-for i in {1..100}; do
+for i in {1..300}; do
    for node_size in "${node_sizes[@]}"; do
       for graph_type in "${graph_types[@]}"; do
          for layer in "${n_layers[@]}"; do
