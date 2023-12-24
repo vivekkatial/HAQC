@@ -21,7 +21,7 @@ for i in {1..300}; do
       for graph_type in "${graph_types[@]}"; do
          for layer in "${n_layers[@]}"; do
                # Set NodeMemory based on node_size and aad
-               if [ "$node_size" -lt 10 ]; then
+               if [ "$node_size" -lt 15 ]; then
                   NodeMemory="16GB"
                else
                   NodeMemory="40GB"
