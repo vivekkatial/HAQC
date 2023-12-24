@@ -7,7 +7,7 @@ working_dir=$(pwd)
 node_sizes=(8)
 
 # Define the array of n_layers
-n_layers=(1)
+n_layers=(1 2 3 4 5 6 7 8 9 10)
 
 # Define the array of graph types
 graph_types=("Nearly Complete BiPartite" "Uniform Random" "Power Law Tree" "Watts-Strogatz small world" "3-Regular Graph" "4-Regular Graph" "Geometric")
@@ -43,10 +43,10 @@ run_job() {
 }
 
 # Fixed number of parallel jobs
-max_jobs=3
+max_jobs=4
 
 # Main processing loop
-for iteration in {1..100}; do
+for iteration in {1..50}; do
     for size in "${node_sizes[@]}"; do
         for layer in "${n_layers[@]}"; do
             for graph in "${graph_types[@]}"; do
