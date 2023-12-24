@@ -25,6 +25,8 @@ echo $1 $2 $3
 
 # The command to run the job, using parameters passed to the script
 apptainer run \
+    --env MLFLOW_TRACKING_USERNAME=$MLFLOW_TRACKING_USERNAME \
+    --env MLFLOW_TRACKING_PASSWORD=$MLFLOW_TRACKING_PASSWORD \
     --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     --pwd /mnt \

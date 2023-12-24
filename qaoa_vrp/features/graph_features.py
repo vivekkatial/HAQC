@@ -56,7 +56,7 @@ def get_graph_features(G):
     # features['Hamiltonian'] =
     # features['independence_number'] = nx.algorithms.mis.maximal_independent_set(G)
     # features['Index'] =
-    features["laplacian_largest_eigenvalue"] = max(e)
+    features["laplacian_largest_eigenvalue"] = max(e).real
     # features['Longest Induced Cycle'] =
     # features['Longest Induced Path'] =
     # features['Matching Number'] =
@@ -78,9 +78,9 @@ def get_graph_features(G):
         features["radius"] = 0
 
     features["regular"] = nx.algorithms.regular.is_regular(G)
-    features["laplacian_second_largest_eigenvalue"] = sorted(e)[1]
-    features["ratio_of_two_largest_laplacian_eigenvaleus"] = max(e) / sorted(e)[1]
-    features["smallest_eigenvalue"] = min(e)
+    features["laplacian_second_largest_eigenvalue"] = sorted(e)[1].real
+    features["ratio_of_two_largest_laplacian_eigenvaleus"] = max(e).real / sorted(e)[1].real
+    features["smallest_eigenvalue"] = min(e).real
     features[
         "vertex_connectivity"
     ] = nx.algorithms.connectivity.connectivity.node_connectivity(G)

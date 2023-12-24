@@ -26,6 +26,25 @@ def compute_max_cut_brute_force(G):
     return max_cut_partition, max_cut_value
 
 
+def compute_distance(n_layers, beta_values, beta_optimised_values, gamma_values, gamma_optimised_values):
+    """
+    Compute the distance based on the given parameters.
+    
+    Parameters:
+    n_layers (int): The number of layers to sum over.
+    beta_values (list): List of beta values.
+    beta_optimised_values (list): List of optimised beta values.
+    gamma_values (list): List of gamma values.
+    gamma_optimised_values (list): List of optimised gamma values.
+    
+    Returns:
+    float: Computed distance.
+    """
+    distance = 0
+    for i in range(n_layers):
+        distance += abs(beta_values[i] - beta_optimised_values[i]) + abs(gamma_values[i] - gamma_optimised_values[i])
+    return distance
+
 # Define functions to compute the optimal parameter values based on parameter concentration
 def get_analytical_parameters(n, n_layers):
     """A function to compute the optimal parameter values based on parameter concentration paper.

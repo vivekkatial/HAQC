@@ -31,8 +31,9 @@ from qaoa_vrp.generators.graph_instance import create_graphs_from_all_sources
 from qaoa_vrp.exp_utils import str2bool, to_snake_case, make_temp_directory, check_boto3_credentials
 from qaoa_vrp.features.graph_features import get_graph_features
 from qaoa_vrp.generators.parameter import get_optimal_parameters
-from qaoa_vrp.solutions.solutions import compute_max_cut_brute_force
+from qaoa_vrp.solutions.solutions import compute_max_cut_brute_force, compute_distance
 from qaoa_vrp.parallel.landscape_parallel import parallel_computation
+from qaoa_vrp.initialisation.initialisation import Initialisation
 from qaoa_vrp.plot.utils import *
 
 # Theme plots to be seaborn style
@@ -138,8 +139,11 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
 
     logging.info(f"Using Classical Optimizer {type(optimizer).__name__}")
 
+    # Initialise Quantum Algorithm list
     algos_initializations = []
     
+    #### QAOA with Instance Based Initialization
+
     # Get instance optimised paramters
     optimal_params = get_optimal_parameters(instance_class, n_layers, df)
     # Check if optimal parameters were found
@@ -158,6 +162,8 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         np.random.uniform(-np.pi / 2, np.pi / 2, N_LAYERS)
     ])
 
+    #### QAOA with 3-regular graph initialization
+
     # Add QAOA with 3-regular graph initialization
     optimal_params = get_optimal_parameters('three_regular_graph', n_layers, df)
     # Check if optimal parameters were found
@@ -170,7 +176,15 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         # Add QAOA with optimal initialization
         algos_initializations.append(('QAOA', initial_point_optimal, 'three_regular_graph_optimised'))
 
+    #### QAOA with TQA (Trotterised Quantum Annealing) initialization
+    
+    # Add QAOA with TQA initialization
+    initial_point_tqa = Initialisation().trotterized_quantum_annealing(n_layers)
+    algos_initializations.append(('QAOA', initial_point_tqa, 'tqa_initialisation'))
 
+    #### QAOA with random initialization
+
+    # Add QAOA with random initialization as well
     algos_initializations.append(('QAOA', initial_point_random, 'random_initialisation'))
 
     # Initialise empty dataframe to store results for each algorithm and init type (for evolution at each time step)
@@ -206,6 +220,7 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
                 initial_point=initial_point, 
                 callback=store_intermediate_result, 
                 quantum_instance=quantum_instance,
+                include_custom=True
             )
             algo_result = qaoa.compute_minimum_eigenvalue(qubitOp)
         else:
@@ -231,6 +246,10 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         # Calculate the approximation ratio
         approximation_ratio = algo_result.eigenvalue.real / exact_result.eigenvalue.real
 
+        # Calculate Distance
+        distance = compute_distance(N_LAYERS, initial_point[:N_LAYERS], algo_result.optimal_point[:N_LAYERS], initial_point[N_LAYERS:], algo_result.optimal_point[N_LAYERS:])
+        logging.info(f"Distance between initial point and optimal point: {distance}")
+
         # Compile results into a dataframe from intermediate values
         results_df = results_df.append(pd.DataFrame({
             'algo': [algo_name] * len(intermediate_values),
@@ -253,6 +272,8 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             mlflow.log_metric(f"{algo_name}_{init_type}_energy_gap", energy_gap)
             # log number of iterations
             mlflow.log_metric(f"{algo_name}_{init_type}_num_iterations", len(eval_counts))
+            # Log distance between initial point and optimal point
+            mlflow.log_metric(f"{algo_name}_{init_type}_distance", distance)
             # Log each optimal parameter in MLFlow
             for i, (beta, gamma) in enumerate(zip(algo_result.optimal_point[:N_LAYERS], algo_result.optimal_point[N_LAYERS:])):
                 mlflow.log_metric(f"{algo_name}_{init_type}_optimal_beta_{i}", beta)
@@ -264,6 +285,8 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         logging.info(f"Probability of success ({algo_name} {init_type}): {success_probability}")
         logging.info(f"Approximation ratio ({algo_name} {init_type}): {approximation_ratio}")
         logging.info(f"Energy gap ({algo_name} {init_type}): {energy_gap}")
+        logging.info(f"Number of iterations ({algo_name} {init_type}): {len(eval_counts)}")
+        logging.info(f"Distance between initial point and optimal point ({algo_name} {init_type}): {distance}")
     
     # Add column for approximation ratio
     results_df['approximation_ratio'] = results_df['energy'] / exact_result.eigenvalue.real
