@@ -5,6 +5,6 @@ setup(
     packages=find_packages(),
     version="0.1.0",
     description="Solving VRP and Last Mile Delivery Problems using QisKit",
-    author="Vivek Katial, Jedwin, Floyd Creevey, Aidan Dang",
+    author="Vivek Katial",
     license="",
 )
