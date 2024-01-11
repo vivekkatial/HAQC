@@ -2,10 +2,8 @@ name: Build and Release Apptainer Container
 
 on:
   push:
-    paths:
-      - '**/Apptainer.Def'
     branches:
-      - main
+      - "main"
 
 jobs:
   build:
