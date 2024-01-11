@@ -20,7 +20,12 @@ qp = tsp.to_quadratic_program()
 # Define the quantum instance
 seed = 123
 algorithm_globals.random_seed = seed
-qi = QuantumInstance(Aer.get_backend('qasm_simulator'), shots=8192, seed_simulator=seed, seed_transpiler=seed)
+qi = QuantumInstance(
+    Aer.get_backend('qasm_simulator'),
+    shots=8192,
+    seed_simulator=seed,
+    seed_transpiler=seed,
+)
 
 # Solve the QUBO using QAOA
 optimizer = COBYLA()

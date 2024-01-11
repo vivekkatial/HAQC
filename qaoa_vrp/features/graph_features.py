@@ -5,6 +5,7 @@ import pynauty as nauty
 from networkx.algorithms.distance_measures import radius
 from itertools import permutations
 
+
 def get_graph_features(G):
     """
     Generates a list of features for the given graph
@@ -79,7 +80,9 @@ def get_graph_features(G):
 
     features["regular"] = nx.algorithms.regular.is_regular(G)
     features["laplacian_second_largest_eigenvalue"] = sorted(e)[1].real
-    features["ratio_of_two_largest_laplacian_eigenvaleus"] = max(e).real / sorted(e)[1].real
+    features["ratio_of_two_largest_laplacian_eigenvaleus"] = (
+        max(e).real / sorted(e)[1].real
+    )
     features["smallest_eigenvalue"] = min(e).real
     features[
         "vertex_connectivity"
@@ -88,16 +91,19 @@ def get_graph_features(G):
     # Additional features based on (https://arxiv.org/pdf/2102.05997.pdf)
     # First we need to make a Nauty graph to leverage `pynauty`
     adj_dict = {node: list(neighbors) for node, neighbors in G.adjacency()}
-    G_pynauty = nauty.Graph(number_of_vertices=G.number_of_nodes(), directed=False, adjacency_dict=adj_dict)
+    G_pynauty = nauty.Graph(
+        number_of_vertices=G.number_of_nodes(), directed=False, adjacency_dict=adj_dict
+    )
     nauty_feats = nauty.autgrp(G_pynauty)
 
     features["number_of_cut_vertices"] = number_of_cut_vertices(G)
     features["number_of_minimal_odd_cycles"] = count_minimal_odd_cycles(G)
-    features["group_size"] = calculate_group_size(G_pynauty)# Based on PyNauty
-    features["number_of_orbits"] = nauty_feats[-1] # Based on PyNauty
+    features["group_size"] = calculate_group_size(G_pynauty)  # Based on PyNauty
+    features["number_of_orbits"] = nauty_feats[-1]  # Based on PyNauty
     features["is_distance_regular"] = nx.is_distance_regular(G)
 
     return features
+
 
 def is_subcycle(small_cycle, big_cycle):
     """
@@ -105,10 +111,11 @@ def is_subcycle(small_cycle, big_cycle):
     """
     return all(node in big_cycle for node in small_cycle)
 
+
 def count_minimal_odd_cycles(graph):
     """
-    Counts the number of minimal odd cycles in a graph. A 
-    minimal odd cycle is an odd-length cycle that does not contain any other odd cycle within it. 
+    Counts the number of minimal odd cycles in a graph. A
+    minimal odd cycle is an odd-length cycle that does not contain any other odd cycle within it.
 
     Parameters:
     graph (networkx.Graph): The graph to be analyzed.
@@ -125,14 +132,18 @@ def count_minimal_odd_cycles(graph):
     # Identifying minimal odd cycles
     minimal_odd_cycles = []
     for cycle in odd_cycles:
-        if not any(is_subcycle(possible_subcycle, cycle) for possible_subcycle in odd_cycles if possible_subcycle != cycle):
+        if not any(
+            is_subcycle(possible_subcycle, cycle)
+            for possible_subcycle in odd_cycles
+            if possible_subcycle != cycle
+        ):
             minimal_odd_cycles.append(cycle)
 
     return len(minimal_odd_cycles)
 
 
-
 # Calculate the number of cut vertices in the graph G
+
 
 def number_of_cut_vertices(G):
     """
@@ -145,6 +156,7 @@ def number_of_cut_vertices(G):
     int: The number of cut vertices in G.
     """
     return len(list(nx.articulation_points(G)))
+
 
 def calculate_group_size(G):
     """
@@ -161,6 +173,6 @@ def calculate_group_size(G):
     grpsize1 = nauty.autgrp(G)[1]
     grpsize2 = nauty.autgrp(G)[2]
 
-    group_size = grpsize1*(10**grpsize2)
+    group_size = grpsize1 * (10**grpsize2)
 
     return group_size

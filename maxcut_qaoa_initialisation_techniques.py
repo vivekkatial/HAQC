@@ -206,7 +206,9 @@ def main(track_mlflow=False):
                 backend, seed_simulator=seed, seed_transpiler=seed
             )
 
-            print(f"Testing Optimizer {i+1}: {type(optimizer).__name__} on method: {method}")
+            print(
+                f"Testing Optimizer {i+1}: {type(optimizer).__name__} on method: {method}"
+            )
 
             counts = []
             values = []
@@ -214,7 +216,9 @@ def main(track_mlflow=False):
             # Callback definition
             def store_intermediate_result(eval_count, parameters, mean, std):
                 if track_mlflow:
-                    import pdb; pdb.set_trace()
+                    import pdb
+
+                    pdb.set_trace()
                     mlflow.log_metric(
                         f"energy_{quant_alg}_instance_type_{instance_type_logging}_size_{instance_size}_n_layer_{n_layers}_method_{method}",
                         mean,
@@ -253,7 +257,7 @@ def main(track_mlflow=False):
                                 initial_point=np.random.rand(2) * 2 * np.pi,
                                 callback=store_intermediate_result,
                                 quantum_instance=quantum_instance,
-                            )    
+                            )
                         else:
                             qaoa = QAOA(
                                 optimizer=optimizer,
@@ -287,7 +291,7 @@ def main(track_mlflow=False):
                     instanceType=instance_type_logging,
                     n_layers=n_layers,
                     restart=restart,
-                    method=method
+                    method=method,
                 )
                 print(json.dumps(logged_parameters, indent=3))
                 if track_mlflow:
@@ -387,7 +391,9 @@ def main(track_mlflow=False):
                         pylab.clf()
                         pylab.rcParams["figure.figsize"] = (12, 8)
                         pylab.plot(total_counts, values, label=type(optimizer).__name__)
-                        pylab.axhline(y=optimal_result.eigenvalue.real, ls="--", c="red")
+                        pylab.axhline(
+                            y=optimal_result.eigenvalue.real, ls="--", c="red"
+                        )
                         pylab.xlabel("Eval count")
                         pylab.ylabel("Energy")
                         pylab.title(

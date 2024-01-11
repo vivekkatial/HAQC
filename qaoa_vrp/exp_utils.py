@@ -12,6 +12,7 @@ import re
 import boto3
 from botocore.exceptions import NoCredentialsError
 
+
 def check_boto3_credentials():
     try:
         # Create a boto3 client to check for credentials

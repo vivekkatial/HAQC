@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 # Function to compute expectation value in parallel
 def compute_expectation_value(beta_val, gamma_val, qubitOp, qaoa):
-    """ Compute expectation value in parallel
+    """Compute expectation value in parallel
     beta_val: beta value
     gamma_val: gamma value
     qubitOp: qubit operator
@@ -22,9 +22,10 @@ def compute_expectation_value(beta_val, gamma_val, qubitOp, qaoa):
     expectation = statevector.expectation_value(qubitOp).real
     return expectation
 
+
 # Parallel computation of the objective function values
 def parallel_computation(gamma, beta, qubitOp, qaoa):
-    """ Parallel computation of the objective function values
+    """Parallel computation of the objective function values
     beta: array of beta values
     gamma: array of gamma values
     qubitOp: qubit operator
@@ -38,7 +39,9 @@ def parallel_computation(gamma, beta, qubitOp, qaoa):
         futures = {}
         for i, gamma_val in enumerate(gamma):
             for j, beta_val in enumerate(beta):
-                future = executor.submit(compute_expectation_value, beta_val, gamma_val, qubitOp, qaoa)
+                future = executor.submit(
+                    compute_expectation_value, beta_val, gamma_val, qubitOp, qaoa
+                )
                 futures[future] = (i, j)
 
         for future in tqdm(as_completed(futures), desc="Progress", total=len(futures)):
@@ -69,14 +72,18 @@ def non_parallel_computation_n_layers_fixed(gamma, beta, qubitOp, qaoa):
             fixed_gamma = [0.3, 0.2, 0.1]
             fixed_gamma.append(gamma_val)
             gamma = fixed_gamma
-            
-            obj_vals[i, j] = compute_expectation_value_n_layers(beta, gamma, qubitOp, qaoa)
+
+            obj_vals[i, j] = compute_expectation_value_n_layers(
+                beta, gamma, qubitOp, qaoa
+            )
 
     return obj_vals
 
 
-def parallel_computation_n_layers_fixed(gamma, beta, fixed_gammas, fixed_betas, qubitOp, qaoa):
-    """ Parallel computation of the objective function values for fixed layers
+def parallel_computation_n_layers_fixed(
+    gamma, beta, fixed_gammas, fixed_betas, qubitOp, qaoa
+):
+    """Parallel computation of the objective function values for fixed layers
     gamma: array of gamma values
     beta: array of beta values
     fixed_gammas: array of fixed gamma values
@@ -97,7 +104,13 @@ def parallel_computation_n_layers_fixed(gamma, beta, fixed_gammas, fixed_betas, 
                 current_gamma = fixed_gammas + [gamma_val]
 
                 # Submit the task to the executor
-                future = executor.submit(compute_expectation_value_n_layers, current_beta, current_gamma, qubitOp, qaoa)
+                future = executor.submit(
+                    compute_expectation_value_n_layers,
+                    current_beta,
+                    current_gamma,
+                    qubitOp,
+                    qaoa,
+                )
                 futures[future] = (i, j)
 
         # Collecting results with a progress bar
