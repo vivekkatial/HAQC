@@ -6,6 +6,7 @@ on:
       - '**/Apptainer.Def'
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,7 +15,11 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
-
+      
+      - name: Install Singularity
+        run: |
+          echo "Commit Message: ${{ github.event.head_commit.message }}"
+          
       - name: Install Apptainer
         run: |
           VERSION=1.0.1  # Specify the desired version of Apptainer
