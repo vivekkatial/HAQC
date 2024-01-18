@@ -211,7 +211,7 @@ From: python:3.9.2
 
 
 %runscript
-  pipenv shell
+  poetry shell
   echo "Container was created $NOW"
   echo "Run one of the built apps. You're not running anything!"
 
