@@ -40,22 +40,22 @@ from qiskit.quantum_info.operators.symplectic.sparse_pauli_op import SparsePauli
 from qiskit.visualization import plot_histogram
 
 # Custom libraries
-import qaoa_vrp.build_graph
-import qaoa_vrp.features.graph_features
-import qaoa_vrp.features.tsp_features
-import qaoa_vrp.build_circuit
-import qaoa_vrp.clustering
-import qaoa_vrp.utils
-from qaoa_vrp.plot.feasibility_graph import (
+import src.build_graph
+import src.features.graph_features
+import src.features.tsp_features
+import src.build_circuit
+import src.clustering
+import src.utils
+from src.plot.feasibility_graph import (
     plot_feasibility_results,
     generate_feasibility_results,
 )
 
-from qaoa_vrp.initialisation.initialisation import Initialisation
-from qaoa_vrp.features.graph_features import get_graph_features
-from qaoa_vrp.features.tsp_features import get_tsp_features
-from qaoa_vrp.parallel.optimize_qaoa import run_qaoa_parallel_control_max_restarts
-from qaoa_vrp.solutions.solutions import FEASIBLE_SOLUTIONS
+from src.initialisation.initialisation import Initialisation
+from src.features.graph_features import get_graph_features
+from src.features.tsp_features import get_tsp_features
+from src.parallel.optimize_qaoa import run_qaoa_parallel_control_max_restarts
+from src.solutions.solutions import FEASIBLE_SOLUTIONS
 
 import argparse
 import json
@@ -91,7 +91,7 @@ instance_path = "data/{}".format(filename)
 
 with open(instance_path) as f:
     data = json.load(f)
-    G, depot_info = qaoa_vrp.build_graph.build_json_graph(data["graph"])
+    G, depot_info = src.build_graph.build_json_graph(data["graph"])
     num_vehicles = int(data["numVehicles"])
     threshold = float(data["threshold"])
     n_max = int(data["n_max"])
@@ -104,18 +104,18 @@ for edge in G.edges():
 edge_mat = nx.linalg.graphmatrix.adjacency_matrix(G).toarray()
 cost_mat = np.array(nx.attr_matrix(G, edge_attr="cost", rc_order=list(G.nodes())))
 
-G, cluster_mapping = qaoa_vrp.clustering.create_clusters(
+G, cluster_mapping = src.clustering.create_clusters(
     G, num_vehicles, "spectral-clustering", edge_mat
 )
 
 depot_edges = list(G.edges(depot_info["id"], data=True))
 depot_node = depot_info["id"]
 
-subgraphs = qaoa_vrp.clustering.build_sub_graphs(G, depot_node, depot_edges)
+subgraphs = src.clustering.build_sub_graphs(G, depot_node, depot_edges)
 
 # big_offset = sum(sum(cost_mat))/2 + 1
 big_offset = 30
-qubos = qaoa_vrp.build_circuit.build_qubos(subgraphs, depot_info, A=big_offset)
+qubos = src.build_circuit.build_qubos(subgraphs, depot_info, A=big_offset)
 
 cluster_mapping = [i + 1 for i in cluster_mapping]
 cluster_mapping.insert(0, 0)

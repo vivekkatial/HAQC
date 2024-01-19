@@ -22,27 +22,26 @@ import pathos.pools as pp
 plt.style.use("seaborn")
 
 # Custom Libraries
-import qaoa_vrp.build_graph
-import qaoa_vrp.features.graph_features
-import qaoa_vrp.features.tsp_features
-import qaoa_vrp.build_circuit
-import qaoa_vrp.clustering
-import qaoa_vrp.utils
-from qaoa_vrp.exp_utils import str2bool, make_temp_directory
-from qaoa_vrp.plot.feasibility_graph import (
+import src.build_graph
+import src.features.graph_features
+import src.features.tsp_features
+import src.build_circuit
+import src.clustering
+import src.utils
+from src.exp_utils import str2bool, make_temp_directory
+from src.plot.feasibility_graph import (
     plot_feasibility_results,
     generate_feasibility_results,
 )
-from qaoa_vrp.initialisation.initialisation import Initialisation
-from qaoa_vrp.features.graph_features import get_graph_features
-from qaoa_vrp.features.tsp_features import get_tsp_features
-from qaoa_vrp.parallel.optimize_qaoa import run_qaoa_parallel_control_max_restarts
+from src.features.graph_features import get_graph_features
+from src.features.tsp_features import get_tsp_features
+from src.parallel.optimize_qaoa import run_qaoa_parallel_control_max_restarts
 
 # Import Qiskit Dependencies
 from qiskit import Aer
 from qiskit.aqua import aqua_globals
 from qiskit.aqua.algorithms import NumPyMinimumEigensolver
-from qiskit.algorithms.optimizers import NELDER_MEAD, COBYLA
+from qiskit.algorithms.optimizers import NELDER_MEAD
 from qiskit.optimization import QuadraticProgram
 from qiskit.optimization.algorithms import MinimumEigenOptimizer
 from qiskit.optimization.applications.ising.common import sample_most_likely
@@ -53,17 +52,13 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
-def run_initialisation_methods_instance(
-    filename: str,
-    max_restarts: int,
-    evolution_time: float,
-    p_max: int,
-    mlflow_tracking: bool,
+def run_nelder_mead_instance(
+    filename, max_restarts: int, p_max=10, mlflow_tracking=False
 ):
     instance_path = "data/{}".format(filename)
     with open(instance_path) as f:
         data = json.load(f)
-    G, depot_info = qaoa_vrp.build_graph.build_json_graph(data["graph"])
+    G, depot_info = src.build_graph.build_json_graph(data["graph"])
     num_vehicles = int(data["numVehicles"])
     threshold = float(data["threshold"])
     n_max = int(data["n_max"])
@@ -100,18 +95,18 @@ def run_initialisation_methods_instance(
     edge_mat = nx.linalg.graphmatrix.adjacency_matrix(G).toarray()
     cost_mat = np.array(nx.attr_matrix(G, edge_attr="cost", rc_order=list(G.nodes())))
 
-    G, cluster_mapping = qaoa_vrp.clustering.create_clusters(
+    G, cluster_mapping = src.clustering.create_clusters(
         G, num_vehicles, "spectral-clustering", edge_mat
     )
 
     depot_edges = list(G.edges(depot_info["id"], data=True))
     depot_node = depot_info["id"]
 
-    subgraphs = qaoa_vrp.clustering.build_sub_graphs(G, depot_node, depot_edges)
+    subgraphs = src.clustering.build_sub_graphs(G, depot_node, depot_edges)
 
     # big_offset = sum(sum(cost_mat))/2 + 1
     big_offset = 30
-    qubos = qaoa_vrp.build_circuit.build_qubos(subgraphs, depot_info, A=big_offset)
+    qubos = src.build_circuit.build_qubos(subgraphs, depot_info, A=big_offset)
 
     cluster_mapping = [i + 1 for i in cluster_mapping]
     cluster_mapping.insert(0, 0)
@@ -160,43 +155,22 @@ def run_initialisation_methods_instance(
 
     print("Quantum Optimisation Starting")
 
-    # Adding all methods
-    methods = [
-        "trotterized_quantum_annealing",
-        "random_initialisation",
-        "perturb_from_previous_layer",
-        "ramped_up_initialisation",
-        "fourier_transform",
-    ]
+    # Initiate optimizers for a parallel run
     optimizers = [
-        # NELDER_MEAD(disp=True, adaptive=True, tol=0.1, maxfev=10000),
-        COBYLA(maxiter=10000, disp=True, rhobeg=1),
+        [
+            NELDER_MEAD(disp=True, adaptive=True, tol=0.1, maxfev=10000),
+            max_restarts,
+            op,
+            p + 1,
+            mlflow_tracking,
+        ]
+        for p in range(p_max)
     ]
-    results = []
 
-    for opt in optimizers:
-        for method in methods:
-            print(f"Running optimisation with {method}")
-            # Initiate optimizers for a parallel run
-            p = 1
-            # Randomly initialise layer alpha, beta at layer 1
-            initial_point = Initialisation(
-                evolution_time=evolution_time
-            ).random_initialisation(p=p)
-            while p <= p_max:
-                run_args = [
-                    opt,
-                    max_restarts,
-                    op,
-                    p,
-                    mlflow_tracking,
-                    Initialisation(p=p, initial_point=initial_point, method=method),
-                ]
-                # Re-assign initial points
-                result = run_qaoa_parallel_control_max_restarts(args=run_args)
-                initial_point = result["min_energy_point"]
-                p += 1
-                results.append(result)
+    with pp.ProcessPool() as pool:
+        print("Starting Parallel Run")
+        results = pool.map(run_qaoa_parallel_control_max_restarts, optimizers)
+        print("Ending Parallel Run")
 
     # Clean up results
     d_results = []
@@ -206,76 +180,45 @@ def run_initialisation_methods_instance(
             columns=["n_eval", "value"],
         )
         d_res["optimizer"] = res["optimizer"]
-        d_res["init_method"] = res["initialisation_method"]
         d_res["layer"] = res["layers"]
         d_results.append(d_res)
     d_results = pd.concat(d_results)
 
     # Add counter for num_evals (+1 so it matches up with n_eval)
-    d_results["total_evals"] = (
-        d_results.groupby(["init_method", "layer"]).cumcount() + 1
-    )
-    # Clean up method
-    d_results["method"] = d_results["init_method"].apply(
-        lambda x: x.replace("_", " ").title()
-    )
-    d_results.reset_index(inplace=True)
+    d_results["total_evals"] = d_results.groupby("layer").cumcount() + 1
+
     with make_temp_directory() as temp_dir:
         results_layer_p_fn = f"results_large_offset.csv"
         results_layer_p_fn = os.path.join(temp_dir, results_layer_p_fn)
-        # Write results
-        with open(results_layer_p_fn, "w") as file:
-            d_results.to_csv(file, index=False)
 
         # Create plots
         g = sns.relplot(
             data=d_results,
             x="total_evals",
             y="value",
-            row="method",
             col="layer",
-            hue="optimizer",
             kind="line",
+            col_wrap=4,
         )
-
         axes = g.axes.flatten()
         for ax in axes:
             ax.axhline(-180, ls="--", linewidth=3, color="grey")
             ax.set_xlabel("Function Evals")
 
         optimization_plot_fn = f"optimization_plot.png"
-        optimization_plot_fn = os.path.join(temp_dir, optimization_plot_fn)
+        optimization_plot_fn = osf.path.join(temp_dir, optimization_plot_fn)
         g.savefig(optimization_plot_fn)
+
         plt.clf()
-
-        # Create plot for CIs
-        g_ave = sns.relplot(
-            data=d_results,
-            x="n_eval",
-            y="value",
-            row="method",
-            col="layer",
-            hue="optimizer",
-            kind="line",
-        )
-
-        axes = g_ave.axes.flatten()
-        for ax in axes:
-            ax.axhline(-180, ls="--", linewidth=3, color="grey")
-            ax.set_xlabel("Function Evals")
-
-        optimization_plot_ave_fn = f"optimization_plot_average.png"
-        optimization_plot_ave_fn = os.path.join(temp_dir, optimization_plot_ave_fn)
-        g_ave.savefig(optimization_plot_ave_fn)
-        plt.clf()
-
         for res in results:
             # Make feasibility graph
             feasibility_p_res = generate_feasibility_results(
                 res["min_energy_state"], exact_result
             )
             feasibility_p = plot_feasibility_results(feasibility_p_res)
-            feasibility_p_fn = f"feasibility_plot_opt_{res['optimizer']}_p_{res['layers']}_meth_{res['initialisation_method']}.png"
+            feasibility_p_fn = (
+                f"feasibility_plot_opt_{res['optimizer']}_p_{res['layers']}.png"
+            )
             feasibility_p_fn = os.path.join(temp_dir, feasibility_p_fn)
             feasibility_p.figure.savefig(feasibility_p_fn, dpi=300, bbox_inches="tight")
 
@@ -283,10 +226,13 @@ def run_initialisation_methods_instance(
             if mlflow_tracking:
                 mlflow.log_artifact(feasibility_p_fn)
 
+        # Write results
+        with open(results_layer_p_fn, "w") as file:
+            d_results.to_csv(file, index=False)
+
         if mlflow_tracking:
             mlflow.log_artifact(results_layer_p_fn)
             mlflow.log_artifact(optimization_plot_fn)
-            mlflow.log_artifact(optimization_plot_ave_fn)
 
     print("\rOptimization complete")
 
@@ -319,14 +265,6 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-E",
-        "--evolution_time",
-        type=float,
-        default=5.0,
-        help="Evolution Time for when using Trotterized Quantum Annealing",
-    )
-
-    parser.add_argument(
         "-T",
         "--track_mlflow",
         type=str2bool,
@@ -338,11 +276,10 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
     t1 = time.time()
     print(f"Run starting at: {time.ctime()}")
-    run_initialisation_methods_instance(
+    run_nelder_mead_instance(
         args["filename"],
         max_restarts=args["max_restarts"],
         p_max=args["p_max"],
-        evolution_time=args["evolution_time"],
         mlflow_tracking=args["track_mlflow"],
     )
     t2 = time.time()

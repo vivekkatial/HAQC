@@ -19,19 +19,19 @@ import seaborn as sns
 import pandas as pd
 
 # Custom Libraries
-import qaoa_vrp.build_graph
-import qaoa_vrp.features.graph_features
-import qaoa_vrp.features.tsp_features
-import qaoa_vrp.build_circuit
-import qaoa_vrp.clustering
-import qaoa_vrp.utils
-from qaoa_vrp.exp_utils import str2bool, make_temp_directory
-from qaoa_vrp.quantum_burden import compute_quantum_burden
-from qaoa_vrp.classical.greedy_tsp import greedy_tsp
-from qaoa_vrp.plot.draw_euclidean_graphs import draw_euclidean_graph
-from qaoa_vrp.plot.feasibility_graph import plot_feasibility
-from qaoa_vrp.features.graph_features import get_graph_features
-from qaoa_vrp.features.tsp_features import get_tsp_features
+import src.build_graph
+import src.features.graph_features
+import src.features.tsp_features
+import src.build_circuit
+import src.clustering
+import src.utils
+from src.exp_utils import str2bool, make_temp_directory
+from src.quantum_burden import compute_quantum_burden
+from src.classical.greedy_tsp import greedy_tsp
+from src.plot.draw_euclidean_graphs import draw_euclidean_graph
+from src.plot.feasibility_graph import plot_feasibility
+from src.features.graph_features import get_graph_features
+from src.features.tsp_features import get_tsp_features
 
 # QISKIT stuff
 from qiskit import Aer
@@ -52,7 +52,7 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
     instance_path = "data/{}".format(filename)
     with open(instance_path) as f:
         data = json.load(f)
-    G, depot_info = qaoa_vrp.build_graph.build_json_graph(data["graph"])
+    G, depot_info = src.build_graph.build_json_graph(data["graph"])
     num_vehicles = int(data["numVehicles"])
     threshold = float(data["threshold"])
     n_max = int(data["n_max"])
@@ -89,18 +89,18 @@ def run_instance(filename, budget: int, p_max=10, mlflow_tracking=False):
     edge_mat = nx.linalg.graphmatrix.adjacency_matrix(G).toarray()
     cost_mat = np.array(nx.attr_matrix(G, edge_attr="cost", rc_order=list(G.nodes())))
 
-    G, cluster_mapping = qaoa_vrp.clustering.create_clusters(
+    G, cluster_mapping = src.clustering.create_clusters(
         G, num_vehicles, "spectral-clustering", edge_mat
     )
 
     depot_edges = list(G.edges(depot_info["id"], data=True))
     depot_node = depot_info["id"]
 
-    subgraphs = qaoa_vrp.clustering.build_sub_graphs(G, depot_node, depot_edges)
+    subgraphs = src.clustering.build_sub_graphs(G, depot_node, depot_edges)
 
     # big_offset = sum(sum(cost_mat))/2 + 1
     big_offset = 30
-    qubos = qaoa_vrp.build_circuit.build_qubos(subgraphs, depot_info, A=big_offset)
+    qubos = src.build_circuit.build_qubos(subgraphs, depot_info, A=big_offset)
 
     cluster_mapping = [i + 1 for i in cluster_mapping]
     cluster_mapping.insert(0, 0)

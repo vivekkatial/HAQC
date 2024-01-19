@@ -9,7 +9,7 @@ from qiskit.aqua.algorithms import QAOA
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from qaoa_vrp.exp_utils import make_temp_directory
+from src.exp_utils import make_temp_directory
 
 
 def run_qaoa_parallel_sv(args):

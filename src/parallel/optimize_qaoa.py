@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from qaoa_vrp.exp_utils import make_temp_directory
-from qaoa_vrp.initialisation.initialisation import Initialisation
+from src.exp_utils import make_temp_directory
+from src.initialisation.initialisation import Initialisation
 
 
 def run_qaoa_parallel_control_max_restarts(args):

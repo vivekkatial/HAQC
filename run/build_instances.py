@@ -1,5 +1,5 @@
 import logging
-from qaoa_vrp.generators.generator_utils import compile_and_write
+from src.generators.generator_utils import compile_and_write
 
 if __name__ == "__main__":
 

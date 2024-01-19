@@ -2,7 +2,7 @@ import networkx as nx
 import numpy as np
 import uuid
 
-from qaoa_vrp.utils import distance, get_direction
+from src.utils import distance, get_direction
 
 
 def generate_random_instance(

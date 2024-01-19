@@ -3,7 +3,7 @@ import numpy as np
 from unittest.mock import patch
 
 from unittest.case import expectedFailure
-from qaoa_vrp.initialisation.initialisation import Initialisation
+from src.initialisation.initialisation import Initialisation
 from PIL.Image import init
 
 

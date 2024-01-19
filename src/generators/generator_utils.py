@@ -2,7 +2,7 @@ import networkx as nx
 import numpy as np
 import json
 from networkx.readwrite import json_graph
-from qaoa_vrp.generators.random_instances import *
+from src.generators.random_instances import *
 import os.path
 
 

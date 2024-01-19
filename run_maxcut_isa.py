@@ -28,19 +28,19 @@ from qiskit.utils import QuantumInstance
 from qiskit_optimization.applications import Maxcut
 
 # Custom imports
-from qaoa_vrp.generators.graph_instance import create_graphs_from_all_sources
-from qaoa_vrp.exp_utils import (
+from src.generators.graph_instance import create_graphs_from_all_sources
+from src.exp_utils import (
     str2bool,
     to_snake_case,
     make_temp_directory,
     check_boto3_credentials,
 )
-from qaoa_vrp.features.graph_features import get_graph_features
-from qaoa_vrp.generators.parameter import get_optimal_parameters
-from qaoa_vrp.solutions.solutions import compute_max_cut_brute_force, compute_distance
-from qaoa_vrp.parallel.landscape_parallel import parallel_computation
-from qaoa_vrp.initialisation.initialisation import Initialisation
-from qaoa_vrp.plot.utils import *
+from src.features.graph_features import get_graph_features
+from src.generators.parameter import get_optimal_parameters
+from src.solutions.solutions import compute_max_cut_brute_force, compute_distance
+from src.parallel.landscape_parallel import parallel_computation
+from src.initialisation.initialisation import Initialisation
+from src.plot.utils import *
 
 # Theme plots to be seaborn style
 plt.style.use('seaborn')

@@ -1,4 +1,4 @@
-from qaoa_vrp.classical.greedy_tsp import greedy_tsp
+from src.classical.greedy_tsp import greedy_tsp
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
