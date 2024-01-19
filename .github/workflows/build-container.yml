@@ -17,7 +17,7 @@ jobs:
       
       - name: Install Singularity
         run: |
-          echo "Commit Message: ${{ github.event.head_commit.message }}"
+          echo "Commit Message: ${{ steps.commit-message.outputs.message }}"
           
       - name: Install Apptainer
         run: |
