@@ -28,19 +28,19 @@ from qiskit.utils import QuantumInstance
 from qiskit_optimization.applications import Maxcut
 
 # Custom imports
-from src.generators.graph_instance import create_graphs_from_all_sources
-from src.exp_utils import (
+from src.haqc.generators.graph_instance import create_graphs_from_all_sources
+from src.haqc.exp_utils import (
     str2bool,
     to_snake_case,
     make_temp_directory,
     check_boto3_credentials,
 )
-from src.features.graph_features import get_graph_features
-from src.generators.parameter import get_optimal_parameters
-from src.solutions.solutions import compute_max_cut_brute_force, compute_distance
-from src.parallel.landscape_parallel import parallel_computation
-from src.initialisation.initialisation import Initialisation
-from src.plot.utils import *
+from src.haqc.features.graph_features import get_graph_features
+from src.haqc.generators.parameter import get_optimal_parameters
+from src.haqc.solutions.solutions import compute_max_cut_brute_force, compute_distance
+from src.haqc.parallel.landscape_parallel import parallel_computation
+from src.haqc.initialisation.initialisation import Initialisation
+from src.haqc.plot.utils import *
 
 # Theme plots to be seaborn style
 plt.style.use('seaborn')

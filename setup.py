@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="qaoa_vrp",
+    name="haqc",
     packages=find_packages(),
     version="0.1.0",
-    description="Solving VRP and Last Mile Delivery Problems using QisKit",
+    description="Solving Optimisation Problems with Quantum Algorithms",
     author="Vivek Katial",
     license="",
 )

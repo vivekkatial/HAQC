@@ -1,10 +1,11 @@
 [tool.poetry]
 name = "HAQC"
 version = "0.1.0"
-description = "A Heuristic Algorithm Frameowrk for Quantum Algorithms"
+description = "A Heuristic Algorithm Framework for Quantum Algorithms"
+readme = "README.md"
 authors = ["Vivek Katial <vivekkatial@gmail.com>"]
 packages = [
-    { include = "qaoa_vrp"},
+    { include = "haqc", from = "src"},
 ]
 
 [tool.poetry.dependencies]
@@ -69,6 +70,7 @@ nbformat = "^5.9.2"
 tqdm = "^4.66.1"
 pynauty = "^2.8.6"
 jupyter = "^1.0.0"
+build = "^1.0.3"
 
 [tool.poetry.dev-dependencies]
 
