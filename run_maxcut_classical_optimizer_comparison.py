@@ -22,7 +22,7 @@ import json
 import pandas as pd
 
 from qiskit import Aer
-from qiskit.algorithms.optimizers import ADAM
+from qiskit.algorithms.optimizers import ADAM, COBYLA, NELDER_MEAD, SPSA, L_BFGS_B, GradientDescent
 from qiskit.algorithms import QAOA, NumPyMinimumEigensolver
 from qiskit.utils import QuantumInstance
 from qiskit_optimization.applications import Maxcut
@@ -59,7 +59,7 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
     if track_mlflow:
         # Configure MLFlow Stuff
         tracking_uri = os.environ["MLFLOW_TRACKING_URI"]
-        experiment_name = "QAOA-Instance-Based-Parameter-Optimization"
+        experiment_name = "QAOA-Classical-Optimization"
         mlflow.set_tracking_uri(tracking_uri)
         mlflow.set_experiment(experiment_name)
 
@@ -138,18 +138,22 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
     logging.info(f"\n{'-'*10} Simulating Instance on Quantum{'-'*10}\n")
     N_LAYERS = n_layers
 
-    # Initialize the optimizer and backend for the Quantum Algorithm
-    optimizer = ADAM()
+    # Initialize the optimizers and backend for the Quantum Algorithm
     backend = Aer.get_backend("aer_simulator_statevector")
     quantum_instance = QuantumInstance(backend)
-
-    logging.info(f"Using Classical Optimizer {type(optimizer).__name__}")
-
     # Initialise Quantum Algorithm list
-    algos_initializations = []
+    # algos_optimizers = {'COBYLA': COBYLA(), 'ADAM': ADAM(), 'NELDER_MEAD': NELDER_MEAD()}
+    algos_optimizers = [
+        ('QAOA','COBYLA',COBYLA()),
+        ('QAOA', 'ADAM', ADAM()),
+        ('QAOA', 'NELDER_MEAD', NELDER_MEAD()),
+        ('QAOA', 'SPSA', SPSA(maxiter=200, blocking=True, learning_rate=0.01, perturbation=0.001, second_order=True)),
+        ('QAOA', 'L_BFGS_B', L_BFGS_B()),
+        ('QAOA', 'GradientDescent', GradientDescent()),
+    ]
 
-    #### QAOA with Instance Based Initialization
-
+    # Use QAOA with Instance Based Initialization
+    init_type = 'QIBPI'
     # Get instance optimised paramters
     optimal_params = get_optimal_parameters(instance_class, n_layers, df)
     # Check if optimal parameters were found
@@ -159,73 +163,24 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         optimal_beta = np.array(optimal_params['beta'])
         optimal_gamma = np.array(optimal_params['gamma'])
         initial_point_optimal = np.concatenate([optimal_beta, optimal_gamma])
-        # Add QAOA with optimal initialization
-        algos_initializations.append(
-            ('QAOA', initial_point_optimal, 'instance_class_optimsed')
-        )
+        initial_point = initial_point_optimal
 
-    # Add QAOA with random initialization as well
-    initial_point_random = np.concatenate(
-        [
-            np.random.uniform(-np.pi / 4, np.pi / 4, N_LAYERS),
-            np.random.uniform(-np.pi / 2, np.pi / 2, N_LAYERS),
-        ]
-    )
-
-    #### QAOA with 3-regular graph initialization
-
-    # Add QAOA with 3-regular graph initialization
-    optimal_params = get_optimal_parameters('three_regular_graph', n_layers, df)
-    # Check if optimal parameters were found
-    if isinstance(optimal_params, str):
-        logging.warning(optimal_params)
-    else:
-        optimal_beta = np.array(optimal_params['beta'])
-        optimal_gamma = np.array(optimal_params['gamma'])
-        initial_point_optimal = np.concatenate([optimal_beta, optimal_gamma])
-        # Add QAOA with optimal initialization
-        algos_initializations.append(
-            ('QAOA', initial_point_optimal, 'three_regular_graph_optimised')
-        )
-
-    #### QAOA with TQA (Trotterised Quantum Annealing) initialization
-
-    # Add QAOA with TQA initialization
-    initial_point_tqa = Initialisation().trotterized_quantum_annealing(n_layers)
-    algos_initializations.append(('QAOA', initial_point_tqa, 'tqa_initialisation'))
-
-    #### QAOA with Parameter Fixation Strategy
-    initial_point_parameter_fixing, initial_point_info = get_optimal_parameters_from_parameter_fixing(
-        n_layers-1, graph_instance=G, n=2
-    )
-    algos_initializations.append(
-        ('QAOA', initial_point_parameter_fixing, 'parameter_fixing')
-    )
-
-    #### QAOA with random initialization
-
-    # Add QAOA with random initialization as well
-    algos_initializations.append(
-        ('QAOA', initial_point_random, 'random_initialisation')
-    )
-
+    # Loop through each algorithm and initialization
     # Initialise empty dataframe to store results for each algorithm and init type (for evolution at each time step)
     results_df = pd.DataFrame(
         columns=['algo', 'init_type', 'eval_count', 'parameters', 'energy', 'std']
     )
-
-    # Loop through each algorithm and initialization
-    for algo_name, initial_point, init_type in algos_initializations:
-        logging.info(f"Running {algo_name} with {init_type} Initialization")
+    for algo_name, optimizer_name, optimizer in algos_optimizers:
+        logging.info(f"Running {algo_name} with {optimizer_name} Initialization")
 
         # Print initial values from algorithm
-        logging.info(f"Initial point ({algo_name} - {init_type}): {initial_point}")
+        logging.info(f"Initial point ({algo_name} - {optimizer_name}): {initial_point}")
 
         # Callback function to store intermediate values
         intermediate_values = []
 
         def store_intermediate_result(eval_count, parameters, mean, std):
-            if eval_count % 100 == 0:
+            if eval_count % 10 == 0:
                 logging.info(
                     f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
                 )
@@ -240,7 +195,7 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
                 }
             )
 
-        # Initialize the algorithm based on its name (e.g., QAOA)
+        # Use optimizer algorithm based on its name (e.g., COBYLA)
         if algo_name == 'QAOA':
             qaoa = QAOA(
                 optimizer=optimizer,
@@ -252,7 +207,7 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             )
             algo_result = qaoa.compute_minimum_eigenvalue(qubitOp)
         else:
-            # Add initialization for other algorithms here (could start off with VQE here too)
+            # Add optimizer= for other algorithms here (could start off with VQE here too)
             pass
         # Compute performance metrics
         eval_counts = [
@@ -292,7 +247,7 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             pd.DataFrame(
                 {
                     'algo': [algo_name] * len(intermediate_values),
-                    'init_type': [init_type] * len(intermediate_values),
+                    'optimizer_name': [optimizer_name] * len(intermediate_values),
                     'eval_count': [
                         intermediate_result['eval_count']
                         for intermediate_result in intermediate_values
@@ -315,28 +270,28 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
 
         # Log results to MLFlow
         if track_mlflow:
-            mlflow.log_param(f"{algo_name}_{init_type}_initial_point", initial_point)
+            mlflow.log_param(f"{algo_name}_{optimizer_name}_initial_point", initial_point)
             mlflow.log_metric(
-                f"{algo_name}_{init_type}_final_energy", algo_result.eigenvalue.real
+                f"{algo_name}_{optimizer_name}_final_energy", algo_result.eigenvalue.real
             )
             # Convert array to string for logging
             most_likely_solution = np.array2string(most_likely_solution)
             mlflow.log_param(
-                f"{algo_name}_{init_type}_most_likely_solution", most_likely_solution
+                f"{algo_name}_{optimizer_name}_most_likely_solution", most_likely_solution
             )
             mlflow.log_metric(
-                f"{algo_name}_{init_type}_success_probability", success_probability
+                f"{algo_name}_{optimizer_name}_success_probability", success_probability
             )
             mlflow.log_metric(
-                f"{algo_name}_{init_type}_approximation_ratio", approximation_ratio
+                f"{algo_name}_{optimizer_name}_approximation_ratio", approximation_ratio
             )
-            mlflow.log_metric(f"{algo_name}_{init_type}_energy_gap", energy_gap)
+            mlflow.log_metric(f"{algo_name}_{optimizer_name}_energy_gap", energy_gap)
             # log number of iterations
             mlflow.log_metric(
-                f"{algo_name}_{init_type}_num_iterations", len(eval_counts)
+                f"{algo_name}_{optimizer_name}_num_iterations", len(eval_counts)
             )
             # Log distance between initial point and optimal point
-            mlflow.log_metric(f"{algo_name}_{init_type}_distance", distance)
+            mlflow.log_metric(f"{algo_name}_{optimizer_name}_distance", distance)
             # Log each optimal parameter in MLFlow
             for i, (beta, gamma) in enumerate(
                 zip(
@@ -344,28 +299,28 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
                     algo_result.optimal_point[N_LAYERS:],
                 )
             ):
-                mlflow.log_metric(f"{algo_name}_{init_type}_optimal_beta_{i}", beta)
-                mlflow.log_metric(f"{algo_name}_{init_type}_optimal_gamma_{i}", gamma)
+                mlflow.log_metric(f"{algo_name}_{optimizer_name}_optimal_beta_{i}", beta)
+                mlflow.log_metric(f"{algo_name}_{optimizer_name}_optimal_gamma_{i}", gamma)
 
-        logging.info(f"Results with {algo_name} {init_type} Initialization:")
+        logging.info(f"Results with {algo_name} {optimizer_name}:")
         logging.info(
-            f"Final energy for ({algo_name} {init_type})<C>: {algo_result.eigenvalue.real}"
+            f"Final energy for ({algo_name} {optimizer_name})<C>: {algo_result.eigenvalue.real}"
         )
         logging.info(
-            f"Most likely solution ({algo_name} {init_type}): {most_likely_solution}"
+            f"Most likely solution ({algo_name} {optimizer_name}): {most_likely_solution}"
         )
         logging.info(
-            f"Probability of success ({algo_name} {init_type}): {success_probability}"
+            f"Probability of success ({algo_name} {optimizer_name}): {success_probability}"
         )
         logging.info(
-            f"Approximation ratio ({algo_name} {init_type}): {approximation_ratio}"
+            f"Approximation ratio ({algo_name} {optimizer_name}): {approximation_ratio}"
         )
-        logging.info(f"Energy gap ({algo_name} {init_type}): {energy_gap}")
+        logging.info(f"Energy gap ({algo_name} {optimizer_name}): {energy_gap}")
         logging.info(
-            f"Number of iterations ({algo_name} {init_type}): {len(eval_counts)}"
+            f"Number of iterations ({algo_name} {optimizer_name}): {len(eval_counts)}"
         )
         logging.info(
-            f"Distance between initial point and optimal point ({algo_name} {init_type}): {distance}"
+            f"Distance between initial point and optimal point ({algo_name} {optimizer_name}): {distance}"
         )
 
     # Add column for approximation ratio
@@ -381,17 +336,17 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
 
         # Plot energy vs iterations for each algorithm and initialization on a single chart
         plt.figure(figsize=(12, 8))
-        for algo_name, initial_point, init_type in algos_initializations:
+        for algo_name, initial_point, optimizer_name in algos_optimizers:
             # Filter results for specific algorithm and initialization
             filtered_results_df = results_df[
                 (results_df['algo'] == algo_name)
-                & (results_df['init_type'] == init_type)
+                & (results_df['optimizer_name'] == optimizer_name)
             ]
             # Plot energy vs iterations
             plt.plot(
                 filtered_results_df['eval_count'],
                 filtered_results_df['energy'],
-                label=f"{algo_name} {init_type}",
+                label=f"{algo_name} {optimizer_name}",
             )
         # Add dashed line for exact ground state energy
         plt.axhline(
@@ -411,17 +366,17 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
 
         # Plot approximation ratio vs iterations for each algorithm and initialization on a single chart
         plt.figure(figsize=(12, 8))
-        for algo_name, initial_point, init_type in algos_initializations:
+        for algo_name, initial_point, optimizer_name in algos_optimizers:
             # Filter results for specific algorithm and initialization
             filtered_results_df = results_df[
                 (results_df['algo'] == algo_name)
-                & (results_df['init_type'] == init_type)
+                & (results_df['optimizer_name'] == optimizer_name)
             ]
             # Plot approximation ratio vs iterations
             plt.plot(
                 filtered_results_df['eval_count'],
                 filtered_results_df['approximation_ratio'],
-                label=f"{algo_name} {init_type}",
+                label=f"{algo_name} {optimizer_name}",
             )
         # Add dashed line for approximation ratio of 1
         plt.axhline(y=1, color='r', linestyle='--', label='Approximation Ratio of 1')
@@ -433,74 +388,6 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             mlflow.log_artifact(
                 os.path.join(tmp_dir, 'approximation_ratio_vs_iterations.png')
             )
-
-    # Logging the Parameter Landscape
-    logging.info(f"\n{'-'*10} Logging the Parameter Landscape {'-'*10}\n")
-    # Note this can take some time
-    logging.info(f"Logging the Parameter Landscape for {graph_type}")
-
-    # Landscape Analysis of Instance (at p=1)
-    qaoa = QAOA(optimizer=ADAM(), reps=1)
-    # Use constrained search space
-    beta = np.linspace(-np.pi / 2, np.pi / 2, 40)
-    gamma = np.linspace(-np.pi / 2, np.pi / 2, 40)
-    # Example usage
-    obj_vals = parallel_computation(beta, gamma, qubitOp, qaoa)
-    # ### Plotting the Parameter Landscape https://ar5iv.labs.arxiv.org/html/2209.01159#A5
-    # The heatmap below represents the landscape of the objective function across
-    # different values of \$\gamma\$ and \$\beta\$.
-    # The color intensity indicates the expectation value of the Hamiltonian,
-    # helping identify the regions where optimal parameters may lie.
-    with make_temp_directory() as tmp_dir:
-        Beta, Gamma = np.meshgrid(beta, gamma)
-        # Plotting
-        plt.figure(figsize=(10, 8))
-        cp = plt.contourf(
-            Beta, Gamma, obj_vals.T, cmap='viridis'
-        )  # Transpose obj_vals if necessary
-        plt.colorbar(cp)
-        plt.title(f'QAOA Objective Function Landscape (p=1) for  {graph_type}')
-        plt.xlabel('Beta')
-        plt.ylabel('Gamma')
-        # Adjust the x and y limits to show the new range
-        plt.xlim(-np.pi / 4, np.pi / 4)
-        plt.ylim(-np.pi / 2, np.pi / 2)
-        # Adjust the x and y labels to show the new pi values
-        plt.xticks([-np.pi / 2, 0, np.pi / 2], [r'$-\pi/2$', r'$0$', r'$\pi/2$'])
-        plt.yticks([-np.pi / 2, 0, np.pi / 2], [r'$-\pi/2$', r'$0$', r'$\pi/2$'])
-
-        # Add markers for the optimal parameters from each initialization point
-        for index, (algo_name, initial_point, init_type) in enumerate(
-            algos_initializations
-        ):
-            # Get initialized parameters from the initial point
-            beta_init = initial_point[:N_LAYERS][0]  # Only take first value for beta
-            gamma_init = initial_point[N_LAYERS:][0]  # Only take first value for gamma
-
-            # Use a different marker and color for each initialization
-            plt.plot(
-                beta_init,
-                gamma_init,
-                color=colors[index],
-                marker=markers[index],
-                markersize=10,
-                label=f"{algo_name} {init_type}",
-            )
-
-        # Adjust legend position
-        plt.legend(
-            loc='upper center',
-            bbox_to_anchor=(0.5, -0.15),
-            ncol=len(algos_initializations),
-            fancybox=True,
-            shadow=True,
-        )
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust the plot to fit the legend
-        plt.savefig(os.path.join(tmp_dir, 'landscape_plot.png'))
-        if track_mlflow:
-            mlflow.log_artifact(os.path.join(tmp_dir, 'landscape_plot.png'))
-        # Clear plots
-        plt.clf()
 
 
 if __name__ == "__main__":
