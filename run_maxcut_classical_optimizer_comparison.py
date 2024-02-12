@@ -8,6 +8,23 @@ logging.basicConfig(
 # Adjust Qiskit's logger to only display errors or critical messages
 qiskit_logger = logging.getLogger('qiskit')
 qiskit_logger.setLevel(logging.ERROR)  # or use logging.CRITICAL
+import warnings
+
+# Ignore divide by zero and invalid value encountered in det warnings
+warnings.filterwarnings(
+    'ignore', category=RuntimeWarning, message='divide by zero encountered in det'
+)
+warnings.filterwarnings(
+    'ignore', category=RuntimeWarning, message='invalid value encountered in det'
+)
+
+
+class OptimizationTermination(Exception):
+    """Exception raised for terminating the optimization process."""
+
+    def __init__(self, message="Optimization terminated early."):
+        self.message = message
+        super().__init__(self.message)
 
 
 logging.info('Script started')
@@ -22,7 +39,20 @@ import json
 import pandas as pd
 
 from qiskit import Aer
-from qiskit.algorithms.optimizers import ADAM, COBYLA, NELDER_MEAD, SPSA, L_BFGS_B, GradientDescent
+from qiskit.algorithms.optimizers import (
+    ADAM,
+    AQGD,
+    CG,
+    COBYLA,
+    GradientDescent,
+    L_BFGS_B,
+    NELDER_MEAD,
+    NFT,
+    POWELL,
+    SLSQP,
+    SPSA,
+    TNC,
+)
 from qiskit.algorithms import QAOA, NumPyMinimumEigensolver
 from qiskit.utils import QuantumInstance
 from qiskit_optimization.applications import Maxcut
@@ -35,26 +65,24 @@ from src.haqc.exp_utils import (
     make_temp_directory,
     check_boto3_credentials,
 )
+
 from src.haqc.features.graph_features import get_graph_features
-from src.haqc.generators.parameter import get_optimal_parameters
 from src.haqc.solutions.solutions import compute_max_cut_brute_force, compute_distance
-from src.haqc.parallel.landscape_parallel import parallel_computation
 from src.haqc.initialisation.initialisation import Initialisation
 from src.haqc.plot.utils import *
-from haqc.initialisation.parameter_fixing import get_optimal_parameters_from_parameter_fixing
+from src.haqc.plot.approximation_ratio import (
+    plot_approx_ratio_vs_iterations_for_optimizers,
+)
 
 # Theme plots to be seaborn style
-plt.style.use('seaborn')
-
-# Check that optimal parameters csv file exists
-if not os.path.exists('data/optimal-parameters.csv'):
-    raise FileNotFoundError('Optimal parameters csv file not found.')
-
-# Load the optimal parameters DataFrame from the csv file
-df = pd.read_csv('data/optimal-parameters.csv')
+plt.style.use('seaborn-white')
+total_fevals = None
 
 
-def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
+def run_qaoa_script(
+    track_mlflow, graph_type, node_size, quant_alg, n_layers, max_feval
+):
+    global total_fevals
 
     if track_mlflow:
         # Configure MLFlow Stuff
@@ -86,6 +114,7 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         mlflow.log_param("instance_size", node_size)
         mlflow.log_param("quantum_algorithm", quant_alg)
         mlflow.log_param("n_layers", n_layers)
+        mlflow.log_param("max_feval", max_feval)
         mlflow.log_params(graph_features)
 
     # Generate the adjacency matrix
@@ -142,79 +171,125 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
     backend = Aer.get_backend("aer_simulator_statevector")
     quantum_instance = QuantumInstance(backend)
     # Initialise Quantum Algorithm list
-    # algos_optimizers = {'COBYLA': COBYLA(), 'ADAM': ADAM(), 'NELDER_MEAD': NELDER_MEAD()}
     algos_optimizers = [
-        ('QAOA','COBYLA',COBYLA()),
-        ('QAOA', 'ADAM', ADAM()),
-        ('QAOA', 'NELDER_MEAD', NELDER_MEAD()),
-        ('QAOA', 'SPSA', SPSA(maxiter=200, blocking=True, learning_rate=0.01, perturbation=0.001, second_order=True)),
-        ('QAOA', 'L_BFGS_B', L_BFGS_B()),
-        ('QAOA', 'GradientDescent', GradientDescent()),
+        ('QAOA', 'COBYLA', COBYLA(tol=0.0001, maxiter=max_feval)),
+        ('QAOA', 'ADAM', ADAM(tol=0.0001, lr=0.01, maxiter=max_feval)),
+        ('QAOA', 'NELDER_MEAD', NELDER_MEAD(tol=0.0001, maxfev=max_feval)),
+        (
+            'QAOA',
+            'SPSA',
+            SPSA(
+                maxiter=max_feval,
+                blocking=True,
+                learning_rate=0.01,
+                perturbation=0.001,
+                second_order=True,
+            ),
+        ),
+        ('QAOA', 'L_BFGS_B', L_BFGS_B(maxfun=max_feval)),
+        ('QAOA', 'GradientDescent', GradientDescent(maxiter=max_feval, tol=0.0001)),
+        ('QAOA', 'CG', CG(maxiter=max_feval)),
+        # Adding missing optimizers with basic configurations
+        (
+            'QAOA',
+            'AQGD',
+            AQGD(
+                maxiter=max_feval,
+                eta=0.5,
+                tol=1e-5,
+                momentum=0.25,
+                param_tol=1e-5,
+                averaging=50,
+            ),
+        ),
+        # ('QAOA', 'GSLS', GSLS(max_eval=max_feval, max_failed_rejection_sampling=100)),
+        (
+            'QAOA',
+            'NFT',
+            NFT(
+                maxfev=max_feval,
+            ),
+        ),
+        ('QAOA', 'POWELL', POWELL(maxfev=max_feval, xtol=0.00001)),
+        ('QAOA', 'SLSQP', SLSQP(maxiter=max_feval)),
+        ('QAOA', 'TNC', TNC(maxiter=max_feval)),
     ]
-
-    # Use QAOA with Instance Based Initialization
-    init_type = 'QIBPI'
-    # Get instance optimised paramters
-    optimal_params = get_optimal_parameters(instance_class, n_layers, df)
-    # Check if optimal parameters were found
-    if isinstance(optimal_params, str):
-        logging.warning(optimal_params)
-    else:
-        optimal_beta = np.array(optimal_params['beta'])
-        optimal_gamma = np.array(optimal_params['gamma'])
-        initial_point_optimal = np.concatenate([optimal_beta, optimal_gamma])
-        initial_point = initial_point_optimal
 
     # Loop through each algorithm and initialization
     # Initialise empty dataframe to store results for each algorithm and init type (for evolution at each time step)
     results_df = pd.DataFrame(
-        columns=['algo', 'init_type', 'eval_count', 'parameters', 'energy', 'std']
+        columns=['layers', 'optimizer', 'eval_count', 'parameters', 'energy', 'std']
     )
-    for algo_name, optimizer_name, optimizer in algos_optimizers:
-        logging.info(f"Running {algo_name} with {optimizer_name} Initialization")
 
-        # Print initial values from algorithm
-        logging.info(f"Initial point ({algo_name} - {optimizer_name}): {initial_point}")
+    for algo_name, optimizer_name, optimizer in algos_optimizers:
+        print(f"{'-'*15} Solving for Optimizer: {optimizer_name} {'-'*15}")
+        initial_point = Initialisation().random_initialisation(n_layers)
 
         # Callback function to store intermediate values
         intermediate_values = []
+        total_feval = 0
+        n_restart = 0
 
-        def store_intermediate_result(eval_count, parameters, mean, std):
-            if eval_count % 10 == 0:
-                logging.info(
-                    f"{type(optimizer).__name__} iteration {eval_count} \t cost function {mean}"
+        while total_feval < max_feval:
+            print(f"{' '*5 + '-'*10} Solving at restart: {n_restart} {'-'*15}")
+
+            def store_intermediate_result(eval_count, parameters, mean, std):
+                global total_fevals  # Refer to the global variable
+                if eval_count >= max_feval:
+                    total_fevals = eval_count
+                    return
+
+                if eval_count % 100 == 0:
+                    logging.info(
+                        f"{optimizer_name} iteration {eval_count} \t cost function {mean}"
+                    )
+                betas = parameters[:n_layers]  # Extracting beta values
+                gammas = parameters[n_layers:]  # Extracting gamma values
+                intermediate_values.append(
+                    {
+                        'eval_count': eval_count,
+                        'parameters': {'gammas': gammas, 'betas': betas},
+                        'mean': mean,
+                        'std': std,
+                    }
                 )
-            betas = parameters[:N_LAYERS]  # Extracting beta values
-            gammas = parameters[N_LAYERS:]  # Extracting gamma values
-            intermediate_values.append(
-                {
-                    'eval_count': eval_count,
-                    'parameters': {'gammas': gammas, 'betas': betas},
-                    'mean': mean,
-                    'std': std,
-                }
-            )
 
-        # Use optimizer algorithm based on its name (e.g., COBYLA)
-        if algo_name == 'QAOA':
             qaoa = QAOA(
+                # Optimize only from the remaining  budget
                 optimizer=optimizer,
-                reps=N_LAYERS,
+                reps=n_layers,
                 initial_point=initial_point,
                 callback=store_intermediate_result,
                 quantum_instance=quantum_instance,
                 include_custom=True,
             )
+
             algo_result = qaoa.compute_minimum_eigenvalue(qubitOp)
-        else:
-            # Add optimizer= for other algorithms here (could start off with VQE here too)
-            pass
-        # Compute performance metrics
-        eval_counts = [
-            intermediate_result['eval_count']
-            for intermediate_result in intermediate_values
-        ]
-        
+
+            # Compute performance metrics
+            eval_counts = [
+                intermediate_result['eval_count']
+                for intermediate_result in intermediate_values
+            ]
+
+            total_feval += eval_counts[-1]
+
+            initial_point = Initialisation().random_initialisation(n_layers)
+
+            n_restart += 1
+
+            # If the algorithm has had more iterations than the maximum, continue to the next algorithm
+            if total_feval >= max_feval:
+                logging.info(
+                    f"Maximum number of iterations reached. Continuing to next algorithm."
+                )
+                continue
+
+        # Logging that optimization has finished
+        logging.info(f"Optimization finished for {optimizer_name}")
+        logging.info(f"Total number of evaluations: {total_feval}")
+        logging.info(f"Number of restarts: {n_restart}")
+
         most_likely_solution = max_cut.sample_most_likely(algo_result.eigenstate)
         # Calculate the energy gap
         energy_gap = exact_result.eigenvalue.real - algo_result.eigenvalue.real
@@ -247,7 +322,7 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             pd.DataFrame(
                 {
                     'algo': [algo_name] * len(intermediate_values),
-                    'optimizer_name': [optimizer_name] * len(intermediate_values),
+                    'optimizer': [optimizer_name] * len(intermediate_values),
                     'eval_count': [
                         intermediate_result['eval_count']
                         for intermediate_result in intermediate_values
@@ -270,14 +345,18 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
 
         # Log results to MLFlow
         if track_mlflow:
-            mlflow.log_param(f"{algo_name}_{optimizer_name}_initial_point", initial_point)
+            mlflow.log_param(
+                f"{algo_name}_{optimizer_name}_initial_point", initial_point
+            )
             mlflow.log_metric(
-                f"{algo_name}_{optimizer_name}_final_energy", algo_result.eigenvalue.real
+                f"{algo_name}_{optimizer_name}_final_energy",
+                algo_result.eigenvalue.real,
             )
             # Convert array to string for logging
             most_likely_solution = np.array2string(most_likely_solution)
             mlflow.log_param(
-                f"{algo_name}_{optimizer_name}_most_likely_solution", most_likely_solution
+                f"{algo_name}_{optimizer_name}_most_likely_solution",
+                most_likely_solution,
             )
             mlflow.log_metric(
                 f"{algo_name}_{optimizer_name}_success_probability", success_probability
@@ -295,38 +374,71 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             # Log each optimal parameter in MLFlow
             for i, (beta, gamma) in enumerate(
                 zip(
-                    algo_result.optimal_point[:N_LAYERS],
-                    algo_result.optimal_point[N_LAYERS:],
+                    algo_result.optimal_point[:n_layers],
+                    algo_result.optimal_point[n_layers:],
                 )
             ):
-                mlflow.log_metric(f"{algo_name}_{optimizer_name}_optimal_beta_{i}", beta)
-                mlflow.log_metric(f"{algo_name}_{optimizer_name}_optimal_gamma_{i}", gamma)
+                mlflow.log_metric(
+                    f"{algo_name}_{optimizer_name}_optimal_beta_{i}", beta
+                )
+                mlflow.log_metric(
+                    f"{algo_name}_{optimizer_name}_optimal_gamma_{i}", gamma
+                )
 
-        logging.info(f"Results with {algo_name} {optimizer_name}:")
-        logging.info(
-            f"Final energy for ({algo_name} {optimizer_name})<C>: {algo_result.eigenvalue.real}"
-        )
-        logging.info(
-            f"Most likely solution ({algo_name} {optimizer_name}): {most_likely_solution}"
-        )
-        logging.info(
-            f"Probability of success ({algo_name} {optimizer_name}): {success_probability}"
-        )
-        logging.info(
-            f"Approximation ratio ({algo_name} {optimizer_name}): {approximation_ratio}"
-        )
-        logging.info(f"Energy gap ({algo_name} {optimizer_name}): {energy_gap}")
-        logging.info(
-            f"Number of iterations ({algo_name} {optimizer_name}): {len(eval_counts)}"
-        )
-        logging.info(
-            f"Distance between initial point and optimal point ({algo_name} {optimizer_name}): {distance}"
-        )
+            logging.info(f"Results with {algo_name} {optimizer_name}:")
+            logging.info(
+                f"Final energy for ({algo_name} {optimizer_name})<C>: {algo_result.eigenvalue.real}"
+            )
+            logging.info(
+                f"Most likely solution ({algo_name} {optimizer_name}): {most_likely_solution}"
+            )
+            logging.info(
+                f"Probability of success ({algo_name} {optimizer_name}): {success_probability}"
+            )
+            logging.info(
+                f"Approximation ratio ({algo_name} {optimizer_name}): {approximation_ratio}"
+            )
+            logging.info(f"Energy gap ({algo_name} {optimizer_name}): {energy_gap}")
+            logging.info(
+                f"Number of iterations ({algo_name} {optimizer_name}): {len(eval_counts)}"
+            )
+            logging.info(
+                f"Distance between initial point and optimal point ({algo_name} {optimizer_name}): {distance}"
+            )
 
     # Add column for approximation ratio
     results_df['approximation_ratio'] = (
         results_df['energy'] / exact_result.eigenvalue.real
     )
+
+    results_df['layers'] = N_LAYERS
+    results_df['total_count'] = results_df.groupby('optimizer').cumcount() + 1
+
+    # Filter out the results where total eval count is greater than max_feval
+    results_df = results_df[results_df['total_count'] <= max_feval]
+    max_approx_ratio = results_df['approximation_ratio'].max()
+    acceptable_approx_ratio = 0.95 * max_approx_ratio
+
+    performance_dict = {}  # This will store the performance for each optimizer
+
+    for optimizer in results_df['optimizer'].unique():
+        # Filter the DataFrame for the current optimizer
+        optimizer_df = results_df[results_df['optimizer'] == optimizer]
+
+        # Find the minimum eval_count where approximation_ratio >= acceptable_approx_ratio
+        acceptable_df = optimizer_df[
+            optimizer_df['approximation_ratio'] >= acceptable_approx_ratio
+        ]
+
+        if not acceptable_df.empty:
+            min_eval_count = acceptable_df['total_count'].min()
+            performance_dict[f'algo_{optimizer}'] = min_eval_count
+        else:
+            # Assign penalty score if the acceptable level is not reached
+            performance_dict[f'algo_{optimizer}'] = 100000
+
+    if track_mlflow:
+        mlflow.log_metrics(performance_dict)
 
     # Save results dataframe to csv and log to mlflow (via tempdir)
     with make_temp_directory() as tmp_dir:
@@ -334,60 +446,16 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         if track_mlflow:
             mlflow.log_artifact(os.path.join(tmp_dir, 'results.csv'))
 
-        # Plot energy vs iterations for each algorithm and initialization on a single chart
-        plt.figure(figsize=(12, 8))
-        for algo_name, initial_point, optimizer_name in algos_optimizers:
-            # Filter results for specific algorithm and initialization
-            filtered_results_df = results_df[
-                (results_df['algo'] == algo_name)
-                & (results_df['optimizer_name'] == optimizer_name)
-            ]
-            # Plot energy vs iterations
-            plt.plot(
-                filtered_results_df['eval_count'],
-                filtered_results_df['energy'],
-                label=f"{algo_name} {optimizer_name}",
-            )
-        # Add dashed line for exact ground state energy
-        plt.axhline(
-            y=exact_result.eigenvalue.real,
-            color='r',
-            linestyle='--',
-            label='Exact Ground State Energy',
+        # Set up the plot
+        plot_approx_ratio_vs_iterations_for_optimizers(
+            results_df,
+            acceptable_approx_ratio,
+            'convergence_plot.png'
+            # os.path.join(tmp_dir, 'convergence_plot.png'),
         )
-        plt.xlabel('Iterations')
-        plt.ylabel('Energy')
-        plt.legend()
-        plt.savefig(os.path.join(tmp_dir, 'energy_vs_iterations.png'))
-        if track_mlflow:
-            mlflow.log_artifact(os.path.join(tmp_dir, 'energy_vs_iterations.png'))
-        # Clear plots
-        plt.clf()
 
-        # Plot approximation ratio vs iterations for each algorithm and initialization on a single chart
-        plt.figure(figsize=(12, 8))
-        for algo_name, initial_point, optimizer_name in algos_optimizers:
-            # Filter results for specific algorithm and initialization
-            filtered_results_df = results_df[
-                (results_df['algo'] == algo_name)
-                & (results_df['optimizer_name'] == optimizer_name)
-            ]
-            # Plot approximation ratio vs iterations
-            plt.plot(
-                filtered_results_df['eval_count'],
-                filtered_results_df['approximation_ratio'],
-                label=f"{algo_name} {optimizer_name}",
-            )
-        # Add dashed line for approximation ratio of 1
-        plt.axhline(y=1, color='r', linestyle='--', label='Approximation Ratio of 1')
-        plt.xlabel('Iterations')
-        plt.ylabel('Approximation Ratio')
-        plt.legend()
-        plt.savefig(os.path.join(tmp_dir, 'approximation_ratio_vs_iterations.png'))
         if track_mlflow:
-            mlflow.log_artifact(
-                os.path.join(tmp_dir, 'approximation_ratio_vs_iterations.png')
-            )
+            mlflow.log_artifact(os.path.join(tmp_dir, 'convergence_plot.png'))
 
 
 if __name__ == "__main__":
@@ -414,6 +482,7 @@ if __name__ == "__main__":
         help="Type of Graph to test (based on qaoa_vrp/generators/graph_instance.py)",
     )
     parser.add_argument("-n", "--node_size", type=int, default=6, help="Size of Graph")
+
     parser.add_argument(
         "-q",
         "--quantum_algorithm",
@@ -425,17 +494,32 @@ if __name__ == "__main__":
         "-l", "--n_layers", type=int, default=1, help="Number of layers for QAOA"
     )
 
+    parser.add_argument(
+        "-f",
+        "--max_feval",
+        type=int,
+        default=1000,
+        help="Maximum number of function evaluations for the optimizer. Default is 1000.",
+    )
+
+    # Parse the arguments
     args = parser.parse_args()
     print(vars(args))
 
+    # Start the timer
     start_time = time.time()
+
+    # Run the QAOA script
     run_qaoa_script(
         track_mlflow=args.track_mlflow,
         graph_type=args.graph_type,
         node_size=args.node_size,
         quant_alg=args.quantum_algorithm,
         n_layers=args.n_layers,
+        max_feval=args.max_feval,
     )
+
+    # End the timer
     end_time = time.time()
 
     print(f"Result found in: {end_time - start_time:.3f} seconds")

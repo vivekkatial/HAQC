@@ -41,7 +41,9 @@ from src.haqc.solutions.solutions import compute_max_cut_brute_force, compute_di
 from src.haqc.parallel.landscape_parallel import parallel_computation
 from src.haqc.initialisation.initialisation import Initialisation
 from src.haqc.plot.utils import *
-from haqc.initialisation.parameter_fixing import get_optimal_parameters_from_parameter_fixing
+from haqc.initialisation.parameter_fixing import (
+    get_optimal_parameters_from_parameter_fixing,
+)
 
 # Theme plots to be seaborn style
 plt.style.use('seaborn')
@@ -195,8 +197,11 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
     algos_initializations.append(('QAOA', initial_point_tqa, 'tqa_initialisation'))
 
     #### QAOA with Parameter Fixation Strategy
-    initial_point_parameter_fixing, initial_point_info = get_optimal_parameters_from_parameter_fixing(
-        n_layers-1, graph_instance=G, n=2
+    (
+        initial_point_parameter_fixing,
+        initial_point_info,
+    ) = get_optimal_parameters_from_parameter_fixing(
+        n_layers - 1, graph_instance=G, n=2
     )
     algos_initializations.append(
         ('QAOA', initial_point_parameter_fixing, 'parameter_fixing')
@@ -259,7 +264,7 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             intermediate_result['eval_count']
             for intermediate_result in intermediate_values
         ]
-        
+
         most_likely_solution = max_cut.sample_most_likely(algo_result.eigenstate)
         # Calculate the energy gap
         energy_gap = exact_result.eigenvalue.real - algo_result.eigenvalue.real
