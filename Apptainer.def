@@ -154,7 +154,7 @@ From: python:3.9.2
     echo "Number of Layers: $n_layers"
 
     # Execute the Python script with provided arguments
-    python run_maxcut_isa.py -T True -G "$graph_type" -n "$node_size" -l "$n_layers"
+    python run_maxcut_parameter_initialisation.py -T True -G "$graph_type" -n "$node_size" -l "$n_layers"
 
   
 
@@ -174,15 +174,33 @@ From: python:3.9.2
 ####################################################
 # APP TO RUN QAOA OPTIMIZERS
 ####################################################
-%apphelp run_qaoa_maxcut_optimizers
+%apphelp run_qaoa_maxcut_classical_optimisers
 
 %applabels run_qaoa_maxcut_optimizers
   APP_NAME QAOA_MAXCUT_OPTIMIZERS
 
-%apprun run_qaoa_maxcut_optimizers
-  # Run experiment
-  python maxcut_qaoa_optimisers.py -T True
+%apprun run_qaoa_maxcut_classical_optimisers
+  # Check if exactly three arguments are provided
+  if [ "$#" -ne 4 ]; then
+      echo "Error: Exactly four arguments required: node_size, graph_type, n_layers, max_feval"
+      echo "Usage: run_qaoa_maxcut_classical_optimisers <node_size> <graph_type> <n_layers> <max_feval>"
+      exit 1
+  fi
 
+  node_size="$1"
+  graph_type="$2"
+  n_layers="$3"
+  max_feval="$4"
+
+  # Echoing arguments for confirmation
+  echo "Running experiment with the following parameters:"
+  echo "Node Size: $node_size"
+  echo "Graph Type: $graph_type"
+  echo "Number of Layers: $n_layers"
+  echo "Maximum Number of : $max_feval"
+
+  # Execute the Python script with provided arguments
+  python run_maxcut_parameter_initialisation.py -T True -G "$graph_type" -n "$node_size" -l "$n_layers" -f "$max_feval"
 
 ####################################################
 # APP TO RUN QAOA INIT TECHNIQUES
