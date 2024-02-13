@@ -131,8 +131,6 @@ data/*
 .vscode/
 **.DS_Store
 .aws/*
-.awshaqc/*
-haqc
 **.pickle
 **.pkl
 **log.txt
