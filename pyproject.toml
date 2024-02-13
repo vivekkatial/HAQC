@@ -4,9 +4,9 @@ version = "0.1.1"
 description = "A Heuristic Algorithm Framework for Quantum Algorithms"
 readme = "README.md"
 authors = ["Vivek Katial <vivekkatial@gmail.com>"]
-
-[tool.poetry.packages]
-include = [{ from="src", include="haqc" }]
+packages = [
+    { include = "haqc", from = "src"},
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
