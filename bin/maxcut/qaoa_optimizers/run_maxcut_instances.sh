@@ -36,7 +36,7 @@ for i in {1..1}; do
 
                log_file="logs/qaoa_maxcut_classical_optimizers_node_${node_size}_graph_${graph_type}_layer_${layer}_run_$i.log"
                echo "Results will be logged into $log_file"
-               sbatch --chdir=$(pwd) --mem $NodeMemory --output="$log_file" bin/maxcut/qaoa_optimizers/run_maxcut_instance.sh $node_size "$graph_type" $layer $max_feval
+               sbatch --chdir=$(pwd) --mem $NodeMemory --output="$log_file" bin/maxcut/qaoa_optimizers/run_maxcut.slurm $node_size "$graph_type" $layer $max_feval
 
                # Increment the counter
                total_jobs=$((total_jobs+1))
