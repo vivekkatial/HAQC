@@ -12,12 +12,12 @@ graph_types=("Nearly Complete BiPartite" "Uniform Random" "Power Law Tree" "Watt
 # Define the array of n_layers
 n_layers=(5)
 
-max_feval=1000
+max_feval=10000
 # Initialize counter
 total_jobs=0
 
 # Main loop (running 100 instances of each node size, graph type and layer)
-for i in {1..3}; do
+for i in {1..1}; do
    for node_size in "${node_sizes[@]}"; do
       for graph_type in "${graph_types[@]}"; do
          for layer in "${n_layers[@]}"; do
@@ -36,7 +36,7 @@ for i in {1..3}; do
 
                log_file="logs/qaoa_maxcut_classical_optimizers_node_${node_size}_graph_${graph_type}_layer_${layer}_run_$i.log"
                echo "Results will be logged into $log_file"
-               # sbatch --chdir=$(pwd) --mem $NodeMemory --output="$log_file" bin/maxcut/qaoa_optimizers/run_maxcut_instance.sh $node_size "$graph_type" $layer $max_feval
+               sbatch --chdir=$(pwd) --mem $NodeMemory --output="$log_file" bin/maxcut/qaoa_optimizers/run_maxcut_instance.sh $node_size "$graph_type" $layer $max_feval
 
                # Increment the counter
                total_jobs=$((total_jobs+1))

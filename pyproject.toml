@@ -65,6 +65,7 @@ plotly = "^5.18.0"
 tqdm = "^4.66.1"
 pynauty = "^2.8.6"
 build = "^1.0.3"
+cvxpy = "^1.4.2"
 
 [tool.poetry.dev-dependencies]
 
