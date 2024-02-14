@@ -199,7 +199,7 @@ From: python:3.9.2
   echo "Maximum Number of : $max_feval"
 
   # Execute the Python script with provided arguments
-  python run_qaoa_maxcut_classical_optimisers.py -T True -G "$graph_type" -n "$node_size" -l "$n_layers" -f "$max_feval"
+  python run_maxcut_classical_optimizer_comparison.py -T True -G "$graph_type" -n "$node_size" -l "$n_layers" -f "$max_feval"
 
 ####################################################
 # APP TO RUN QAOA INIT TECHNIQUES
