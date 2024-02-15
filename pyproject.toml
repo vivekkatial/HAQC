@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "haqc"
-version = "0.1.1"
+version = "1.0.3"
 description = "A Heuristic Algorithm Framework for Quantum Algorithms"
 readme = "README.md"
 authors = ["Vivek Katial <vivekkatial@gmail.com>"]
