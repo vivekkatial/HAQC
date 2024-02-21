@@ -331,11 +331,7 @@ def run_qaoa_script(
         else:
             # Otherwise, assign the minimum eval_count that meets or exceeds the acceptable approximation ratio
             performance_dict[algo_key] = sufficient_evals.min()
-
-    # Plot the approximation ratio vs. iterations for each algorithm
-    plot_approx_ratio_vs_iterations_for_layers(
-        results_df, max_layers, f"n_layers_convergence.png"
-    )
+            
     # Track to MLFlow
     if track_mlflow:
         mlflow.log_metrics(performance_dict)

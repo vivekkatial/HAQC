@@ -75,57 +75,6 @@ From: python:3.9.2
     awscli
 
 ####################################################
-# APP TO RUN EXPERIMENT
-####################################################
-%apphelp run_experiment
-  This is the help for running experiments. To run an experiment feed the following Arguments: 
-    - ARG_1=<INSTANCE_FILENAME>
-
-%applabels run_experiment
-  APP_NAME RUNNING_EXPERIMENTS
-
-%apprun run_experiment
-  # Argument Array
-  instance="$@"
-  # Print valid arguments
-  echo $instance
-  # Run experiment
-  python -W ignore qaoa_vrp/run_optimizers_parallel.py -f $instance -b 1000 -p 10 -T True
-
-####################################################
-# APP TO RUN EXPERIMENT FOR ONE OPTIMIZER
-####################################################
-%apphelp run_optimizer
-  This is the help for running experiments. To run an experiment feed the following Arguments: 
-    - ARG_1=<INSTANCE_FILENAME>
-
-%applabels run_optimizer
-  APP_NAME run_optimizer
-
-%apprun run_optimizer
-  # Argument Array
-  instance="$@"
-  # Print valid arguments
-  echo $instance
-  # Run experiment
-  # python qaoa_vrp/run_nelder_mead.py -f $instance -m 5 -p 10 -T True
-  python qaoa_vrp/run_initial_methods.py -f $instance -m 5 -p 10 -T -E 7.5 -T True
-  # python qaoa_vrp/run_initial_methods.py -f $instance -m 5 -p 15 -E 1.0 -T True
-
-####################################################
-# APP TO RUN VQE MAXCUT
-####################################################
-%apphelp run_vqe_maxcut
-  This is the help running MAXCUT instances on VQE
-
-%applabels run_vqe_maxcut
-  APP_NAME VQE_MAXCUT
-
-%apprun run_vqe_maxcut
-  # Run experiment
-  python maxcut_vqe.py -T True
-
-####################################################
 # APP TO RUN QAOA INSTANCE SIZE PARAMETER CONC
 ####################################################
 %apphelp run_qaoa_maxcut_params_conc
@@ -155,20 +104,6 @@ From: python:3.9.2
     # Execute the Python script with provided arguments
     python run_maxcut_parameter_initialisation.py -T True -G "$graph_type" -n "$node_size" -l "$n_layers"
 
-  
-
-
-####################################################
-# APP TO RUN QAOA VANILLA INSTANCE
-####################################################
-%apphelp run_qaoa_maxcut_layers
-
-%applabels run_qaoa_maxcut_layers
-  APP_NAME QAOA_MAXCUT_LAYERS
-
-%apprun run_qaoa_maxcut_layers
-  # Run experiment
-  python maxcut_qaoa_layers_vanilla.py -T True
 
 ####################################################
 # APP TO RUN QAOA OPTIMIZERS
@@ -202,29 +137,35 @@ From: python:3.9.2
   python run_maxcut_classical_optimizer_comparison.py -T True -G "$graph_type" -n "$node_size" -l "$n_layers" -f "$max_feval"
 
 ####################################################
-# APP TO RUN QAOA INIT TECHNIQUES
+# APP TO RUN QAOA N Layers
 ####################################################
-%apphelp run_qaoa_maxcut_initialisation_techniques
+%apphelp run_qaoa_maxcut_n_layers
 
-%applabels run_qaoa_maxcut_initialisation_techniques
+%applabels run_qaoa_maxcut_n_layers
   APP_NAME QAOA_MAXCUT_OPTIMIZERS
 
-%apprun run_qaoa_maxcut_initialisation_techniques
-  # Run experiment
-  python maxcut_qaoa_initialisation_techniques.py -T True
+%apprun run_qaoa_maxcut_n_layers
+  # Check if exactly three arguments are provided
+  if [ "$#" -ne 4 ]; then
+      echo "Error: Exactly four arguments required: node_size, graph_type, n_layers, max_feval"
+      echo "Usage: run_qaoa_maxcut_n_layers <node_size> <graph_type> <n_layers> <max_feval>"
+      exit 1
+  fi
 
-####################################################
-# APP TO BUILD EXPERIMENTS
-####################################################
-%apphelp build_instances
-  This is the help for building our instances.
+  node_size="$1"
+  graph_type="$2"
+  n_layers="$3"
+  max_feval="$4"
 
-%applabels build_instances
-  APP_NAME BUILD_INSTANCES
+  # Echoing arguments for confirmation
+  echo "Running experiment with the following parameters:"
+  echo "Node Size: $node_size"
+  echo "Graph Type: $graph_type"
+  echo "Number of Layers: $n_layers"
+  echo "Maximum Number of : $max_feval"
 
-%apprun build_instances
-  # Run experiment
-  python run/build_instances.py
+  # Execute the Python script with provided arguments
+  python run_qaoa_maxcut_n_layers.py -T True -G "$graph_type" -n "$node_size" -l "$n_layers" -f "$max_feval"
 
 
 %runscript
