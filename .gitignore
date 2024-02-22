@@ -134,3 +134,4 @@ data/*
 **.pickle
 **.pkl
 **log.txt
+**.sif

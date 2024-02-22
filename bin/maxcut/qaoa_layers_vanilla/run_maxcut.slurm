@@ -8,14 +8,27 @@
 #SBATCH --cpus-per-task=8
 
 # set your minimum acceptable walltime=hours:minutes:seconds
-#SBATCH -t 00-23:59:59
+#SBATCH --time=10:00:00  
 
 # Specify your email address to be notified of progress.
 ### SBATCH --mail-user=vkatial@student.unimelb.edu.au
 ### SBATCH --mail-type=ALL
 
-# Load in Singularity Model
-module load singularity/3.5.3
+module purge
+module load GCCcore/11.3.0
+module load Apptainer/1.1.8
 
-# The command to actually run the job
-singularity run --app run_qaoa_maxcut_layers vqe_maxcut.img
+
+# Load in environment modules
+source ~/.bashrc
+echo $1 $2 $3
+
+# The command to run the job, using parameters passed to the script
+apptainer run \
+    --env MLFLOW_TRACKING_USERNAME=$MLFLOW_TRACKING_USERNAME \
+    --env MLFLOW_TRACKING_PASSWORD=$MLFLOW_TRACKING_PASSWORD \
+    --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+    --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    --pwd /mnt \
+    --bind $(pwd):/mnt \
+    --app run_qaoa_maxcut_n_layers haqc.sif $1 "$2" $3 $4
