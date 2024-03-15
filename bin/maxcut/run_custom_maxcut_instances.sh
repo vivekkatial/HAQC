@@ -31,7 +31,7 @@ for instance in $CUSTOM_INSTANCE_PATH/*.pkl; do
             echo "Results will be logged into $log_file"
 
             # Submit the job to Slurm
-            sbatch --chdir=$(pwd) --mem $NodeMemory --output="$log_file" ../bin/maxcut/run_maxcut.slurm $node_size "$graph_type" $layer
+            sbatch --chdir=$(pwd) --mem $NodeMemory --output="$log_file" bin/maxcut/run_maxcut.slurm $node_size "$graph_type" $layer
 
             # Increment the counter
             total_jobs=$((total_jobs+1))
