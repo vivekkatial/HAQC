@@ -4,7 +4,7 @@
 set -eo pipefail
 
 # Set path for instances exist
-CUSTOM_INSTANCE_PATH="instance-generators/instances_final"
+CUSTOM_INSTANCE_PATH="data"
 
 # Define the array of node sizes
 node_sizes=(12)
