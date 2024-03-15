@@ -5,6 +5,7 @@ set -eo pipefail
 
 # Define the directory where the .pkl files will be downloaded
 BASE_DIR="instances_final"
+REPO_URL="https://github.com/vivekkatial/instance-generators.git"
 
 download_instances() {
     if [ ! -d "$BASE_DIR" ]; then
