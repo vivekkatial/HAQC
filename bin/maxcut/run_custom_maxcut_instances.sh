@@ -3,23 +3,8 @@
 # Set bash script to fail at first error, and echo all commands
 set -eo pipefail
 
-# Define the directory where the .pkl files will be downloaded
-BASE_DIR="instances_final"
-REPO_URL="https://github.com/vivekkatial/instance-generators.git"
-
-download_instances() {
-    if [ ! -d "$BASE_DIR" ]; then
-        echo "Downloading instances from GitHub..."
-        git clone --depth 1 --filter=blob:none --sparse $REPO_URL
-        cd instance-generators
-        git sparse-checkout add $BASE_DIR
-    else
-        echo "Instances already downloaded."
-    fi
-}
-
-# Download the instances to the local directory
-download_instances
+# Set path for instances exist
+CUSTOM_INSTANCE_PATH="instance-generators/instances_final"
 
 # Define the array of node sizes
 node_sizes=(12)
@@ -31,7 +16,7 @@ n_layers=(3)
 total_jobs=0
 
 # Loop through all .pkl files in the directory
-for instance in instance-generators/*.pkl; do
+for instance in $CUSTOM_INSTANCE_PATH/*.pkl; do
     for node_size in "${node_sizes[@]}"; do
         for layer in "${n_layers[@]}"; do
             # Set NodeMemory based on node_size
