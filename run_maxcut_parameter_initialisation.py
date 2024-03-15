@@ -28,7 +28,7 @@ from qiskit.utils import QuantumInstance
 from qiskit_optimization.applications import Maxcut
 
 # Custom imports
-from src.haqc.generators.graph_instance import create_graphs_from_all_sources
+from src.haqc.generators.graph_instance import create_graphs_from_all_sources, GraphInstance
 from src.haqc.exp_utils import (
     str2bool,
     to_snake_case,
@@ -65,12 +65,26 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
         mlflow.set_tracking_uri(tracking_uri)
         mlflow.set_experiment(experiment_name)
 
-    # Generate all graph sources
-    G_instances = create_graphs_from_all_sources(instance_size=node_size, sources="ALL")
+    # if graph type is a `.pkl` file, load the graph from the file
+    if graph_type.endswith(".pkl"):
+        G = nx.read_gpickle(graph_type)
+        # Parse source from file name (keep everything before _target... non-inclusive of the '_target' part and after 'data/')
+        G.graph_type = graph_type.split('data/')[1].split('_target')[0]
+        # Append custom to the graph type
+        G.graph_type = f"{G.graph_type}"
+        logging.info(
+            f"\n{'-'*10} This run is for a custom graph with {len(G.nodes())} nodes of source {G.graph_type}  {'-'*10}\n"
+        )
+        graph_instance = GraphInstance(G, G.graph_type)
+        if track_mlflow:
+            mlflow.log_param("custom_graph", True)
+    else:
+        # Generate all graph sources
+        G_instances = create_graphs_from_all_sources(instance_size=node_size, sources="ALL")
 
-    G_instances = [g for g in G_instances if g.graph_type == graph_type]
-    graph_instance = G_instances[0]
-    G = graph_instance.G
+        G_instances = [g for g in G_instances if g.graph_type == graph_type]
+        graph_instance = G_instances[0]
+        G = graph_instance.G
 
     logging.info(
         f"\n{'-'*10} This run is for a {graph_instance.graph_type} graph with {len(G.nodes())} nodes  {'-'*10}\n"
@@ -195,17 +209,6 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
     # Add QAOA with TQA initialization
     initial_point_tqa = Initialisation().trotterized_quantum_annealing(n_layers)
     algos_initializations.append(('QAOA', initial_point_tqa, 'tqa_initialisation'))
-
-    #### QAOA with Parameter Fixation Strategy
-    (
-        initial_point_parameter_fixing,
-        initial_point_info,
-    ) = get_optimal_parameters_from_parameter_fixing(
-        n_layers - 1, graph_instance=G, n=2
-    )
-    algos_initializations.append(
-        ('QAOA', initial_point_parameter_fixing, 'parameter_fixing')
-    )
 
     #### QAOA with random initialization
 
@@ -506,6 +509,11 @@ def run_qaoa_script(track_mlflow, graph_type, node_size, quant_alg, n_layers=1):
             mlflow.log_artifact(os.path.join(tmp_dir, 'landscape_plot.png'))
         # Clear plots
         plt.clf()
+
+        # Also save the graph instance as a .pkl file
+        if track_mlflow:
+            nx.write_gpickle(G, os.path.join(tmp_dir, 'graph_instance.pkl'))
+            mlflow.log_artifact(os.path.join(tmp_dir, 'graph_instance.pkl'))
 
 
 if __name__ == "__main__":
