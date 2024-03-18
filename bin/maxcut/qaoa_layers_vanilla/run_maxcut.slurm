@@ -21,7 +21,7 @@ module load Apptainer/1.1.8
 
 # Load in environment modules
 source ~/.bashrc
-echo $1 $2 $3
+echo $1 $2 $3 $4
 
 # The command to run the job, using parameters passed to the script
 apptainer run \
