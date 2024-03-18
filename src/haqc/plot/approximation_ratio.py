@@ -8,31 +8,31 @@ def plot_approx_ratio_vs_iterations_for_layers(results_df, max_layers, filename)
     '''Plot the approximation ratio vs. iterations for selected algorithms: 
     every 5 layers and always include the first layer. Every 5th layer (and the first layer) 
     has a highlighted thickness, and only these layers are shown in the legend.'''
+    
+    # Group by 'algo' and 'restart', then calculate the max 'approx_ratio' for each group
+    max_ratio_per_restart = results_df.groupby(['algo', 'restart'])['approx_ratio'].max().reset_index()
 
-    fig, ax = plt.subplots()
+    # Calculate median and IQR for each algo
+    median_max_ratios = max_ratio_per_restart.groupby('algo')['approx_ratio'].median().reset_index(name='median')
+    iqr_max_ratios = max_ratio_per_restart.groupby('algo')['approx_ratio'].quantile([0.25, 0.75]).unstack().reset_index()
+    iqr_max_ratios.columns = ['algo', 'q1', 'q3']
 
-    # Plot every 5 layers and always include the first layer
-    for layer in range(1, max_layers+1):
-        if layer == 1 or layer % 5 == 0:
-            layer_df = results_df[results_df['algo'] == layer]
-            # Set a higher linewidth for the first layer and every 5th layer
-            linewidth = 1
-            label = f'Algo {layer}'
-            ax.plot(layer_df['eval_count'], layer_df['approx_ratio'], label=label, linewidth=linewidth)
+    # Merge median and IQR data
+    plot_data = pd.merge(median_max_ratios, iqr_max_ratios, on='algo')
 
-    # Calculate the acceptable approximation ratio
-    max_approx_ratio = results_df['approx_ratio'].max()
-    acceptable_approx_ratio = 0.95 * max_approx_ratio
+    # Plotting
+    plt.figure(figsize=(12, 8))
+    plt.errorbar(plot_data['algo'], plot_data['median'], 
+                yerr=[plot_data['median'] - plot_data['q1'], plot_data['q3'] - plot_data['median']],
+                fmt='o-', capsize=5, capthick=2, ecolor='black', color='black', mec='grey', mew=2, ms=10)
 
-    # Add dotted lines for the acceptable approximation ratio and an approximation ratio of 1
-    ax.axhline(y=acceptable_approx_ratio, color='r', linestyle='--', label='Acceptable Approx. Ratio')
-    ax.axhline(y=1, color='g', linestyle='--', label='Approx. Ratio of 1')
+    plt.title('Best Approx Ratio')
+    plt.xlabel('Layer')
+    plt.ylabel('Approx Ratio')
+    plt.ylim(0, 1)  # Setting y-axis limits
+    plt.xticks(plot_data['algo'])  # Ensure all algo are shown
+    plt.grid(True)
 
-    # Labeling the plot
-    ax.set_xlabel('Iterations (eval_count)')
-    ax.set_ylabel('Approximation Ratio')
-    ax.set_title('Approximation Ratio vs Iterations ')
-    ax.legend()
     # Save the plot to a file
     plt.savefig(filename)
 

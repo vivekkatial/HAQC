@@ -39,7 +39,7 @@ import json
 import pandas as pd
 
 from qiskit import Aer
-from qiskit.algorithms.optimizers import NELDER_MEAD
+from qiskit.algorithms.optimizers import SLSQP
 from qiskit.algorithms import QAOA, NumPyMinimumEigensolver
 from qiskit.utils import QuantumInstance
 from qiskit_optimization.applications import Maxcut
@@ -172,7 +172,7 @@ def run_qaoa_script(
             def store_intermediate_result(eval_count, parameters, mean, std):
                 if eval_count % 100 == 0:
                     logging.info(
-                        f"{type(NELDER_MEAD()).__name__} iteration {eval_count} \t cost function {mean}"
+                        f"{type(SLSQP()).__name__} iteration {eval_count} \t cost function {mean}"
                     )
                 betas = parameters[:layer]  # Extracting beta values
                 gammas = parameters[layer:]  # Extracting gamma values
@@ -182,12 +182,13 @@ def run_qaoa_script(
                         'parameters': {'gammas': gammas, 'betas': betas},
                         'mean': mean,
                         'std': std,
+                        'restart': n_restart,
                     }
                 )
 
             qaoa = QAOA(
                 # Optimize only from the remaining  budget
-                optimizer=NELDER_MEAD(maxfev=max_feval - total_feval),
+                optimizer=SLSQP(maxiter=max_feval - total_feval),
                 reps=layer,
                 initial_point=initial_point,
                 callback=store_intermediate_result,
@@ -209,14 +210,18 @@ def run_qaoa_script(
 
             n_restart += 1
 
-            # Compile results into a dataframe from intermediate values
+        # Compile results into a dataframe from intermediate values
         results_df = results_df.append(
             pd.DataFrame(
                 {
                     'algo': [layer] * len(intermediate_values),
-                    'optimizer_name': [type(NELDER_MEAD()).__name__]
+                    'optimizer_name': [type(SLSQP()).__name__]
                     * len(intermediate_values),
                     'eval_count': [i + 1 for i in range(total_feval)],
+                    'restart': [
+                        intermediate_result['restart'] 
+                        for intermediate_result in intermediate_values
+                    ],
                     'parameters': [
                         intermediate_result['parameters']
                         for intermediate_result in intermediate_values
@@ -344,6 +349,11 @@ def run_qaoa_script(
                 results_df, max_layers, f"{tmp_dir}/approx_ratio_vs_iterations.png"
             )
             mlflow.log_artifact(os.path.join(tmp_dir, "approx_ratio_vs_iterations.png"))
+
+            # Save the graph network to a file and MLFlow as a pkl file
+            nx.write_gpickle(G, os.path.join(tmp_dir, "graph_network.pkl"))
+            mlflow.log_artifact(os.path.join(tmp_dir, "graph_network.pkl"))
+            
 
 
 if __name__ == "__main__":
