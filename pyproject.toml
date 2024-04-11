@@ -66,6 +66,8 @@ tqdm = "^4.66.1"
 pynauty = "^2.8.6"
 build = "^1.0.3"
 cvxpy = "^1.4.2"
+pyarrow = "14.0.2"
+gradio = "^4.25.0"
 
 [tool.poetry.dev-dependencies]
 

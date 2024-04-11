@@ -70,6 +70,8 @@ def run_qaoa_script(
         f"{'-'*10} Running QAOA Script for investigating number of layers {'-'*10}"
     )
 
+    breakpoint()
+
     if track_mlflow:
         # Configure MLFlow Stuff
         tracking_uri = os.environ["MLFLOW_TRACKING_URI"]

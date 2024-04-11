@@ -24,7 +24,7 @@ def compute_expectation_value(beta_val, gamma_val, qubitOp, qaoa):
 
 
 # Parallel computation of the objective function values
-def parallel_computation(gamma, beta, qubitOp, qaoa):
+def parallel_computation(beta, gamma, qubitOp, qaoa):
     """Parallel computation of the objective function values
     beta: array of beta values
     gamma: array of gamma values
@@ -81,7 +81,7 @@ def non_parallel_computation_n_layers_fixed(gamma, beta, qubitOp, qaoa):
 
 
 def parallel_computation_n_layers_fixed(
-    gamma, beta, fixed_gammas, fixed_betas, qubitOp, qaoa
+    beta, gamma, fixed_betas,  fixed_gammas, qubitOp, qaoa
 ):
     """Parallel computation of the objective function values for fixed layers
     gamma: array of gamma values
