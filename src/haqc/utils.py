@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import math
+import networkx as nx
 
 
 def np_encoder(object):
@@ -57,3 +58,11 @@ def get_direction():
         return get_direction()
     else:
         return direction
+
+def adjacency_matrix_to_graph(adj_matrix):
+    """Convert an adjacency matrix back to a networkx graph."""
+    # Convert the list of lists (adjacency matrix) to a numpy array
+    np_matrix = np.array(adj_matrix)
+    # Use from_numpy_array since from_numpy_matrix might be deprecated or causing issues
+    return nx.from_numpy_array(np_matrix)
+

@@ -63,6 +63,31 @@ def convert_from_fourier_point(
             )
     return new_point
 
+def lookup_optimal_values(graph_type):
+    """
+    Lookup for optimal beta and gamma values based on the graph type for p=1
+    
+    Parameters:
+    - graph_type: str, describing the type of the graph.
+    
+    Returns:
+    - tuple of (beta, gamma) values if found, otherwise None.
+    """
+    # Defining the optimal values for each graph type directly as provided
+    optimal_values = {
+        "2-Regular (ring)": [-math.pi / 8, math.pi / 4],
+        "3-Regular (no triangle)": [-math.pi / 8, math.atan(2)],
+        "3-Regular Graph": [-0.0904 * math.pi, 0.2209 * math.pi],
+        "4-Regular Graph": [-0.4277 * math.pi, -0.1888 * math.pi],
+        "Geometric": [-0.0582 * math.pi, -0.8394 * math.pi],
+        "Nearly Complete BiPartite": [0.0863 * math.pi, -0.2048 * math.pi],
+        "Power Law Tree": [-0.1250 * math.pi, 0.4101 * math.pi],
+        "Uniform Random": [0.1104 * math.pi, 0.7751 * math.pi],
+        "Watts-Strogatz small world": [0.0703 * math.pi, -0.1807 * math.pi]
+    }
+    
+    return optimal_values.get(graph_type, None)
+
 
 class Initialisation:
     """Initialisation Class for the method for initialisations"""
