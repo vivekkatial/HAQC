@@ -247,3 +247,40 @@ if __name__ == "__main__":
 
         with open(f"{directory}/optimization_results_{N_LAYERS}_layers.json", "w") as file:
             json.dump(json_data, file, indent=4)
+
+    # Solve for the minimum energy using the NumPyMinimumEigensolver
+    exact = NumPyMinimumEigensolver()
+    adjacency_matrix = nx.adjacency_matrix(G)
+    max_cut = Maxcut(adjacency_matrix)
+    qubitOp, offset = max_cut.to_quadratic_program().to_ising()
+    result = exact.compute_minimum_eigenvalue(qubitOp)
+    print(f"Exact Ground State Energy: {result.eigenvalue.real}")
+    print(f"Exact Ground State Eigenstate: {result.eigenstate}")
+
+    # Read in .temp/{graph_type}/optimization_results_15_layers.json
+    with open(f".temp/{instance['graph_type']}/optimization_results_15_layers.json", "r") as file:
+        optimization_results = json.load(file)
+    
+    # Add in the exact_ground_state_energy and exact_ground_state_Eigenstate to the optimization_results
+    optimization_results["exact_ground_state_energy"] = result.eigenvalue.real
+    # Extract the eigenstate as a list
+    exact_ground_state_eigenstate = result.eigenstate._primitive._data.tolist()
+    # Only keep the real part of the eigenstate
+    exact_ground_state_eigenstate = [np.real(e) for e in exact_ground_state_eigenstate]
+    # Get the solution as a list
+    solution = Maxcut.sample_most_likely(result.eigenstate).tolist()
+    # Get the symmetric solution
+    symmetric_solution = [1 if s == 0 else 0 for s in solution]
+
+    # Create a dict to store information about the exact ground state
+    optimization_results["exact_ground_state"] = {
+        "energy": result.eigenvalue.real,
+        "objective": result.eigenvalue.real + offset, 
+        "eigenstate": exact_ground_state_eigenstate,
+        "solution": solution,
+        "symmetric_solution": symmetric_solution
+    }
+    
+    # Save the updated optimization_results to the JSON file
+    with open(f".temp/{instance['graph_type']}/optimization_results_15_layers.json", "w") as file:
+        json.dump(optimization_results, file, indent=4)

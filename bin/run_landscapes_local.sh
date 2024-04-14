@@ -4,13 +4,13 @@ ls
 
 # Create array of Graph Types
 graph_types=( 
-    # "Uniform Random" 
+    "Uniform Random" 
     "Power Law Tree" 
     "Watts-Strogatz small world" 
     "Geometric" 
     "Nearly Complete BiPartite" 
     "3-Regular Graph" 
-    # "4-Regular Graph" 
+    "4-Regular Graph" 
     "3-Regular (no triangle)" 
     "2-Regular (ring)"
     )
