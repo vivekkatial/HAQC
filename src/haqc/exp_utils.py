@@ -80,3 +80,29 @@ def clean_parameters_for_logging(algo_result, **kwargs):
 
     cleaned_params = {f"{kwarg_str}_{k}": v for k, v in cleaned_params.items()}
     return cleaned_params
+
+def find_instance_class(file_name):
+    """Function for finding instance class from data local file 
+
+    Args:
+        file_name (str): Pkl file that we're running
+
+    Returns:
+        str: Name of instance class
+    """
+    # List of instance classes defined within the function
+    instance_classes = [
+        "power_law_tree",
+        "geometric",
+        "nearly_complete_bi_partite",
+        "three_regular_graph",
+        "uniform_random",
+        "watts_strogatz_small_world",
+        "four_regular_graph"
+    ]
+
+    # Iterate through the list to find a matching instance class
+    for instance_class in instance_classes:
+        if instance_class in file_name:
+            return instance_class
+    return "No matching instance class found"

@@ -4,15 +4,15 @@ set -eo pipefail
 printf "\n       \\               ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ \n        \ji            ♥ Running VQE MAXCUT Experiments ♥\n        /.(((          ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ \n       (,/\"(((__,--. \n           \  ) _( /{  \n           !|| \" :||    \n           !||   :||  \n           '''   '''  \n"
 
 # Define the array of node sizes
-node_sizes=(4 6 8 10 12 14)
+node_sizes=(12)
 
 # Define the array of graph types
 graph_types=("Nearly Complete BiPartite" "Uniform Random" "Power Law Tree" "Watts-Strogatz small world" "3-Regular Graph" "4-Regular Graph" "Geometric")
 
 # Define the array of n_layers
-n_layers=(5)
+n_layers=(15)
 
-max_feval=10000
+max_feval=20000
 # Initialize counter
 total_jobs=0
 

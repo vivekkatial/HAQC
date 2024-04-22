@@ -58,12 +58,13 @@ from qiskit.utils import QuantumInstance
 from qiskit_optimization.applications import Maxcut
 
 # Custom imports
-from src.haqc.generators.graph_instance import create_graphs_from_all_sources
+from src.haqc.generators.graph_instance import create_graphs_from_all_sources, GraphInstance
 from src.haqc.exp_utils import (
     str2bool,
     to_snake_case,
     make_temp_directory,
     check_boto3_credentials,
+    find_instance_class
 )
 
 from src.haqc.features.graph_features import get_graph_features
@@ -84,6 +85,8 @@ def run_qaoa_script(
 ):
     global total_fevals
 
+    
+
     if track_mlflow:
         # Configure MLFlow Stuff
         tracking_uri = os.environ["MLFLOW_TRACKING_URI"]
@@ -91,12 +94,24 @@ def run_qaoa_script(
         mlflow.set_tracking_uri(tracking_uri)
         mlflow.set_experiment(experiment_name)
 
-    # Generate all graph sources
-    G_instances = create_graphs_from_all_sources(instance_size=node_size, sources="ALL")
+    # if graph type is a `.pkl` file, load the graph from the file
+    if graph_type.endswith(".pkl"):
+        G = nx.read_gpickle(graph_type)
+        # Extract the graph type from the file name
+        G.graph_type = find_instance_class(graph_type)
+        logging.info(
+            f"\n{'-'*10} This run is for a custom graph with {len(G.nodes())} nodes of source {G.graph_type}  {'-'*10}\n"
+        )
+        graph_instance = GraphInstance(G, G.graph_type)
+        if track_mlflow:
+            mlflow.log_param("custom_graph", True)
+    else:
+        # Generate all graph sources
+        G_instances = create_graphs_from_all_sources(instance_size=node_size, sources="ALL")
 
-    G_instances = [g for g in G_instances if g.graph_type == graph_type]
-    graph_instance = G_instances[0]
-    G = graph_instance.G
+        G_instances = [g for g in G_instances if g.graph_type == graph_type]
+        graph_instance = G_instances[0]
+        G = graph_instance.G
 
     logging.info(
         f"\n{'-'*10} This run is for a {graph_instance.graph_type} graph with {len(G.nodes())} nodes  {'-'*10}\n"
