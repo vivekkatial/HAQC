@@ -465,8 +465,8 @@ def run_qaoa_script(
         plot_approx_ratio_vs_iterations_for_optimizers(
             results_df,
             acceptable_approx_ratio,
-            'convergence_plot.png'
-            # os.path.join(tmp_dir, 'convergence_plot.png'),
+            #'convergence_plot.png'
+            os.path.join(tmp_dir, 'convergence_plot.png'),
         )
 
         if track_mlflow:
