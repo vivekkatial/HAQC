@@ -10,7 +10,7 @@ CUSTOM_INSTANCE_PATH="data"
 node_sizes=(20)
 
 # Define the array of n_layers
-n_layers=(15)
+n_layers=(20)
 
 max_feval=20000
 
